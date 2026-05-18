@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
       dynamic: 30,
       static: 300,
     },
+    // Required by cachedNavigations
+    cacheComponents: true,
     // Keep prefetched RSC payloads in memory while navigating
     cachedNavigations: true,
     // Inline prefetched data so first-click navigation is also instant
