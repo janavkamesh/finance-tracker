@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileHeader } from "@/components/layout/mobile-header";
+import { BottomNav } from "@/components/layout/bottom-nav";
 
 export default async function DashboardLayout({
   children,
@@ -48,7 +49,12 @@ export default async function DashboardLayout({
         {/* Spacer so content clears the fixed mobile header */}
         <div className="h-14 md:hidden" />
         {children}
+        {/* Spacer so content clears the fixed bottom nav */}
+        <div className="h-16 md:hidden" />
       </div>
+
+      {/* Bottom navigation — mobile only */}
+      <BottomNav />
     </div>
   );
 }

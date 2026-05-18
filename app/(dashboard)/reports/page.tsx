@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
-  title: "Reports — FinTrack India",
+  title: "Insights — FinTrack India",
 };
 import { createClient } from "@/lib/supabase/server";
 import { formatINR } from "@/lib/utils";
@@ -106,7 +106,7 @@ export default async function ReportsPage({
     <main className="p-6 md:p-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-gray-900">Reports</h1>
+        <h1 className="text-xl font-bold text-gray-900">Insights</h1>
         <Suspense fallback={null}>
           <YearSelector year={year} />
         </Suspense>

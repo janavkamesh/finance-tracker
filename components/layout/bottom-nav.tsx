@@ -5,36 +5,32 @@ import { usePathname } from "next/navigation";
 import { Home, ArrowLeftRight, TrendingUp, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const NAV = [
+const TABS = [
   { label: "Home", href: "/dashboard", icon: Home },
   { label: "Transactions", href: "/transactions", icon: ArrowLeftRight },
   { label: "Insights", href: "/reports", icon: TrendingUp },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
-export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-col gap-0.5">
-      {NAV.map(({ label, href, icon: Icon }) => {
-        const active =
-          pathname === href || pathname.startsWith(href + "/");
+    <nav className="fixed inset-x-0 bottom-0 z-30 flex h-16 items-stretch border-t border-gray-100 bg-white md:hidden">
+      {TABS.map(({ label, href, icon: Icon }) => {
+        const active = pathname === href || pathname.startsWith(href + "/");
         return (
           <Link
             key={href}
             href={href}
-            onClick={onNavigate}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              active
-                ? "bg-[#1E6B4E]/10 text-[#1E6B4E]"
-                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
+              "flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors",
+              active ? "text-[#1E6B4E]" : "text-gray-400 hover:text-gray-600",
             )}
           >
             <Icon
               className={cn(
-                "size-4 shrink-0",
+                "size-5 shrink-0",
                 active ? "text-[#1E6B4E]" : "text-gray-400",
               )}
             />
