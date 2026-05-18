@@ -99,7 +99,7 @@ export default async function TransactionsPage({
           <p className="text-sm text-gray-500 mt-0.5">
             {txns.length === 0
               ? "No transactions match your filters"
-              : `${txns.length} transaction${txns.length !== 1 ? "s" : ""}`}
+              : `${txns.length} transaction${txns.length !== 1 ? "s" : ""} found`}
           </p>
         </div>
         <TransactionDialog categories={cats} />

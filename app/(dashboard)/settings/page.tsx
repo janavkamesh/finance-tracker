@@ -56,6 +56,7 @@ export default async function SettingsPage() {
   return (
     <main className="p-6 md:p-8 max-w-3xl space-y-6">
       <h1 className="text-xl font-bold text-gray-900">Settings</h1>
+      <p className="text-sm text-gray-500 mt-0.5">Manage your profile, budget, and categories</p>
 
       {/* ── Profile ────────────────────────────────────────────────── */}
       <section className="rounded-2xl border border-gray-100 bg-white p-6">

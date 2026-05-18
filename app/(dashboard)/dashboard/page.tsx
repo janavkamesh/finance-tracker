@@ -63,6 +63,19 @@ export default async function DashboardPage() {
   const monthNet = monthIncome - monthExpense;
   const monthTxnCount = currentMonthTxns.length;
 
+  // ── Previous-month stats (for delta indicators) ───────────────────
+  const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevYear = prevDate.getFullYear();
+  const prevMonth = prevDate.getMonth() + 1;
+  const prevMonthTxns = allTxns.filter((t) => {
+    const [y, m] = t.date.split("-");
+    return Number(y) === prevYear && Number(m) === prevMonth;
+  });
+  const prevIncome = prevMonthTxns.filter((t) => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
+  const prevExpense = prevMonthTxns.filter((t) => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
+  const prevNet = prevIncome - prevExpense;
+  const prevTxnCount = prevMonthTxns.length;
+
   // ── Monthly bar chart data (last 6 months) ────────────────────────
   const monthlyData: MonthlyData[] = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
@@ -100,34 +113,50 @@ export default async function DashboardPage() {
   // ── Recent transactions (last 5) ─────────────────────────────────
   const recent = allTxns.slice(0, 5);
 
+  function delta(current: number, prev: number, lowerIsBetter = false) {
+    if (prev === 0) return null;
+    const diff = current - prev;
+    if (diff === 0) return null;
+    const positive = lowerIsBetter ? diff < 0 : diff > 0;
+    return {
+      label: (diff > 0 ? "+" : "") + formatINR(Math.abs(diff)) + " vs last month",
+      up: diff > 0,
+      green: positive,
+    };
+  }
+
   const summaryCards = [
     {
       label: "Income",
       value: formatINR(monthIncome),
       color: "text-green-600",
-      bg: "bg-green-50",
       dot: "bg-green-500",
+      delta: delta(monthIncome, prevIncome),
     },
     {
       label: "Expenses",
       value: formatINR(monthExpense),
       color: "text-red-600",
-      bg: "bg-red-50",
       dot: "bg-red-500",
+      delta: delta(monthExpense, prevExpense, true),
     },
     {
       label: "Net savings",
       value: (monthNet >= 0 ? "+" : "") + formatINR(monthNet),
       color: monthNet >= 0 ? "text-green-600" : "text-red-600",
-      bg: monthNet >= 0 ? "bg-green-50" : "bg-red-50",
       dot: monthNet >= 0 ? "bg-green-500" : "bg-red-500",
+      delta: delta(monthNet, prevNet),
     },
     {
       label: "Transactions",
       value: String(monthTxnCount),
       color: "text-gray-900",
-      bg: "bg-gray-50",
       dot: "bg-[#1E6B4E]",
+      delta: prevTxnCount > 0 ? {
+        label: `${monthTxnCount > prevTxnCount ? "+" : ""}${monthTxnCount - prevTxnCount} vs last month`,
+        up: monthTxnCount > prevTxnCount,
+        green: null,
+      } : null,
     },
   ];
 
@@ -155,6 +184,17 @@ export default async function DashboardPage() {
             <p className={`text-lg font-bold tabular-nums ${card.color}`}>
               {card.value}
             </p>
+            {card.delta && (
+              <p className={`mt-1 text-xs tabular-nums truncate ${
+                card.delta.green === null
+                  ? "text-gray-400"
+                  : card.delta.green
+                    ? "text-green-600"
+                    : "text-red-500"
+              }`}>
+                {card.delta.up ? "↑" : "↓"} {card.delta.label}
+              </p>
+            )}
           </div>
         ))}
       </div>
