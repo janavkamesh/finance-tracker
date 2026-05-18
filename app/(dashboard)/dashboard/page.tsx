@@ -159,8 +159,23 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* Budget progress — only shown when a budget is set */}
-      {profile?.monthly_budget && (() => {
+      {/* Budget progress — always visible */}
+      {!profile?.monthly_budget ? (
+        <div className="rounded-xl border border-dashed border-gray-200 bg-white px-5 py-4 mb-6 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-gray-900">Monthly budget</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Set a limit to track how much you&apos;re spending
+            </p>
+          </div>
+          <a
+            href="/settings"
+            className="text-xs font-medium text-[#1E6B4E] hover:underline shrink-0 ml-4"
+          >
+            Set budget →
+          </a>
+        </div>
+      ) : (() => {
         const budget = Number(profile.monthly_budget);
         const pct = Math.min((monthExpense / budget) * 100, 100);
         const remaining = budget - monthExpense;

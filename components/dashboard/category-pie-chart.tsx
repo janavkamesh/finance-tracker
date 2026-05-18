@@ -23,8 +23,13 @@ const FALLBACK_COLORS = [
 export function CategoryPieChart({ data }: { data: CategorySlice[] }) {
   if (data.length === 0) {
     return (
-      <div className="flex h-[280px] items-center justify-center text-sm text-gray-400">
-        No expense data this month
+      <div className="flex h-[280px] flex-col items-center justify-center gap-2 text-center">
+        <svg className="w-8 h-8 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />
+        </svg>
+        <p className="text-sm font-medium text-gray-400">Where your money went</p>
+        <p className="text-xs text-gray-300">Log an expense to see your category breakdown</p>
       </div>
     );
   }
