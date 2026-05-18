@@ -400,15 +400,16 @@ vercel --prod --yes
 ### Layout profile fetch removed
 `app/(dashboard)/layout.tsx` previously fetched the `profiles` table on every request. It now reads `user.user_metadata.full_name` instead — `updateProfile` writes to both the `profiles` table and `auth.user_metadata`, so no extra roundtrip is needed just to show the user's name in the sidebar.
 
-### Client-side router cache (`next.config.ts`)
+### Client-side router cache + eager prefetch (Phase 14 final)
 ```ts
-experimental: {
-  staleTimes: { dynamic: 30, static: 300 },
-  cachedNavigations: true,
-  prefetchInlining: true,
-}
+// next.config.ts
+experimental: { staleTimes: { dynamic: 30, static: 300 } }
 ```
-`staleTimes.dynamic = 30` makes Next.js cache RSC payloads for dynamic routes on the client for 30 seconds. Navigating to a recently-visited page serves the cached payload instantly — no server round-trip. Server actions (`revalidatePath`) bust the cache for the affected path when data mutates.
+`staleTimes.dynamic = 30` caches RSC payloads for dynamic routes on the client for 30 seconds. Server actions (`revalidatePath`) bust the cache for affected paths when data mutates.
+
+**Eager prefetch** (`nav-links.tsx`, `bottom-nav.tsx`): on mount, both nav components call `router.prefetch(href)` for every tab, and each `<Link>` uses `prefetch={true}`. This fires background requests to pre-fetch all 4 page RSC payloads (with real auth + data) immediately when the app loads — before the user taps anything. Combined with `staleTimes.dynamic=30`, the payloads are cached and every tap is instant.
+
+> **Note:** `cachedNavigations` and `prefetchInlining` experimental flags were attempted but caused build errors in Next.js 16.2.6 — they require additional internal flags not publicly configurable. Do not add them.
 
 ---
 

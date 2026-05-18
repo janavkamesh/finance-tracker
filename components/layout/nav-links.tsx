@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Home, ArrowLeftRight, TrendingUp, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +15,14 @@ const NAV = [
 
 export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Eagerly prefetch all pages as soon as the nav mounts.
+  // With staleTimes.dynamic=30, these payloads stay in the client cache for 30s —
+  // clicking any tab is instant even on first visit.
+  useEffect(() => {
+    NAV.forEach(({ href }) => router.prefetch(href));
+  }, [router]);
 
   return (
     <nav className="flex flex-col gap-0.5">
@@ -24,6 +33,7 @@ export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           <Link
             key={href}
             href={href}
+            prefetch={true}
             onClick={onNavigate}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
