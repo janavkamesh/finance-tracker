@@ -295,8 +295,12 @@ export default async function DashboardPage() {
         </div>
 
         {recent.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-sm text-gray-400">
-            No transactions yet — add your first one.
+          <div className="flex flex-col items-center justify-center py-12 gap-1 text-center">
+            <svg className="w-8 h-8 text-gray-200 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0c1.1.128 1.907 1.077 1.907 2.185z" />
+            </svg>
+            <p className="text-sm font-medium text-gray-400">Nothing here yet</p>
+            <p className="text-xs text-gray-300">Your recent transactions will appear here</p>
           </div>
         ) : (
           <ul className="divide-y divide-gray-50">
@@ -308,43 +312,39 @@ export default async function DashboardPage() {
               return (
                 <li
                   key={txn.date + txn.description}
-                  className="flex items-center gap-4 px-5 py-3.5"
+                  className="flex items-stretch overflow-hidden"
                 >
-                  <div
-                    className={`h-2 w-2 shrink-0 rounded-full ${isIncome ? "bg-green-500" : "bg-red-500"}`}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {txn.description}
-                    </p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {cat && (
-                        <span
-                          className="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium"
-                          style={{
-                            backgroundColor: cat.color
-                              ? `${cat.color}18`
-                              : "#f3f4f6",
-                            color: cat.color ?? "#6b7280",
-                          }}
-                        >
-                          {cat.name}
-                        </span>
-                      )}
-                      <span className="text-xs text-gray-400">
-                        {new Date(txn.date + "T00:00:00").toLocaleDateString(
-                          "en-IN",
-                          { day: "numeric", month: "short" },
+                  {/* Left color stripe */}
+                  <div className={`w-[3px] shrink-0 ${isIncome ? "bg-green-400" : "bg-red-400"}`} />
+                  <div className="flex flex-1 items-center gap-4 px-5 py-3.5">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">
+                        {txn.description}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {cat && (
+                          <span
+                            className="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium"
+                            style={{
+                              backgroundColor: cat.color ? `${cat.color}18` : "#f3f4f6",
+                              color: cat.color ?? "#6b7280",
+                            }}
+                          >
+                            {cat.name}
+                          </span>
                         )}
-                      </span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(txn.date + "T00:00:00").toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                          })}
+                        </span>
+                      </div>
                     </div>
+                    <span className={`text-base font-bold tabular-nums shrink-0 ${isIncome ? "text-green-600" : "text-gray-800"}`}>
+                      {isIncome ? "+" : "−"}{formatINR(txn.amount)}
+                    </span>
                   </div>
-                  <span
-                    className={`text-sm font-semibold tabular-nums shrink-0 ${isIncome ? "text-green-600" : "text-red-600"}`}
-                  >
-                    {isIncome ? "+" : "-"}
-                    {formatINR(txn.amount)}
-                  </span>
                 </li>
               );
             })}

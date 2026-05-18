@@ -28,8 +28,12 @@ export function AreaTrendChart({ data }: { data: MonthPoint[] }) {
 
   if (!hasData) {
     return (
-      <div className="flex h-[280px] items-center justify-center text-sm text-gray-400">
-        No transactions recorded for this year
+      <div className="flex h-[280px] flex-col items-center justify-center gap-2 text-center">
+        <svg className="w-8 h-8 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
+        </svg>
+        <p className="text-sm font-medium text-gray-400">No data for {new Date().getFullYear()}</p>
+        <p className="text-xs text-gray-300">Add transactions to see your yearly income and expense trends</p>
       </div>
     );
   }
