@@ -386,6 +386,29 @@ vercel --prod --yes
 | 9 | DB migration (renamed `note→notes`, added `description` column, added `color` to categories + seeded 12 colors), Settings page — budget form, custom categories CRUD with color picker |
 | 10 | Profile form, password form, `updateProfile` (updates both `profiles` table and `auth.user_metadata`), budget progress bar on dashboard |
 | 11 | Loading skeletons (all 4 routes), error boundary with `unstable_retry`, branded 404 page, page `<title>` metadata, GitHub push + Vercel deploy |
+| 12 | UX audit: mobile bottom nav, summary card deltas, budget CTA card, transaction row redesign, empty states, auth security badge, page subtitles |
+| 13 | Bug fixes: amount validation (Number() coerce before Zod), category dropdown (native `<select>` replaces Base UI Select), description optional + notes removed |
+| 14 | Performance: `createClient` + `getUser` wrapped with React `cache()` (one auth roundtrip per request); layout reads `user_metadata.full_name` instead of DB query; `next.config.ts` sets `staleTimes.dynamic=30` + `cachedNavigations` + `prefetchInlining` for instant client-side navigation |
+
+---
+
+## Performance Notes
+
+### Auth deduplication (`lib/supabase/server.ts`)
+`createClient` and `getUser` are wrapped with React `cache()`. Within one server render tree (layout + page), `supabase.auth.getUser()` is called exactly once regardless of how many components import `getUser`. This eliminates 2-3 redundant Supabase Auth roundtrips per navigation.
+
+### Layout profile fetch removed
+`app/(dashboard)/layout.tsx` previously fetched the `profiles` table on every request. It now reads `user.user_metadata.full_name` instead — `updateProfile` writes to both the `profiles` table and `auth.user_metadata`, so no extra roundtrip is needed just to show the user's name in the sidebar.
+
+### Client-side router cache (`next.config.ts`)
+```ts
+experimental: {
+  staleTimes: { dynamic: 30, static: 300 },
+  cachedNavigations: true,
+  prefetchInlining: true,
+}
+```
+`staleTimes.dynamic = 30` makes Next.js cache RSC payloads for dynamic routes on the client for 30 seconds. Navigating to a recently-visited page serves the cached payload instantly — no server round-trip. Server actions (`revalidatePath`) bust the cache for the affected path when data mutates.
 
 ---
 
