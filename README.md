@@ -423,3 +423,44 @@ experimental: { staleTimes: { dynamic: 30, static: 300 } }
 | `z.coerce.number()` in react-hook-form | Breaks generics — use `z.number()` + `valueAsNumber: true` on `<input>` |
 | Zod `invalid_type_error` option | Removed in Zod v4 — use `message` directly |
 | Zod `.errors` on parse result | Use `.issues` in Zod v4 |
+
+---
+
+## Slow Page Navigation — Root Cause & Fix (Lesson for Future Projects)
+
+### Why it happened
+
+Next.js App Router pages are **Server Components**. Every tab click triggers a real HTTP request: the server authenticates the user and queries the database before sending the page back. The browser shows `loading.tsx` (skeleton) the entire time it waits.
+
+The default Next.js behavior makes this worse:
+- `<Link>` only pre-fetches the **loading skeleton** for dynamic (cookie-based) routes — not the actual page data
+- `staleTimes.dynamic = 0` by default — the client discards a cached page the moment you leave it
+- Result: every tab click → skeleton for 1–2 seconds → page appears
+
+With Supabase on a separate server from Vercel, each navigation cost 400–800ms minimum (auth roundtrip + DB query).
+
+### What was tried and why it partially failed
+
+| Attempt | Result |
+|---|---|
+| React `cache()` on `getUser` | Reduced duplicate auth calls within one request; helped server latency but did NOT eliminate the skeleton |
+| `staleTimes.dynamic:30` + `cachedNavigations` + `prefetchInlining` | `cachedNavigations` requires undocumented internal flags in Next.js 16.2.6 — caused build failures |
+
+### The fix that worked
+
+**Two things combined:**
+
+**1. `staleTimes.dynamic: 30` in `next.config.ts`**
+Keeps the RSC payload in the browser's memory for 30 seconds after visiting a page. Any page revisited within that window is served from client cache — zero server roundtrip.
+
+**2. Eager `router.prefetch()` in both nav components (`nav-links.tsx`, `bottom-nav.tsx`)**
+```ts
+useEffect(() => {
+  NAV.forEach(({ href }) => router.prefetch(href));
+}, [router]);
+```
+The moment the navigation bar mounts, it fires background prefetch requests for every tab using the user's real auth cookies. The server renders all 4 pages in the background before the user taps anything. Combined with `staleTimes.dynamic: 30`, those payloads stay in memory. Result: instant navigation with no skeleton.
+
+### Rule for future projects
+
+> Any Next.js App Router dashboard with auth + DB queries will be slow by default. Always add `staleTimes.dynamic` + eager `router.prefetch()` in the nav component. The prefetch fires once on load, costs nothing to the user, and makes every subsequent tab switch instant.
