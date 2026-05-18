@@ -12,13 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { transactionSchema, type TransactionInput } from "@/lib/validations/transaction";
 import { addTransaction, updateTransaction } from "@/actions/transactions";
 
@@ -36,7 +29,6 @@ interface Transaction {
   category_id: string;
   description: string;
   date: string;
-  notes: string | null;
 }
 
 interface Props {
@@ -70,7 +62,6 @@ export function TransactionDialog({ categories, transaction }: Props) {
           category_id: transaction.category_id,
           description: transaction.description,
           date: transaction.date,
-          notes: transaction.notes ?? "",
         }
       : {
           type: "expense",
@@ -78,7 +69,6 @@ export function TransactionDialog({ categories, transaction }: Props) {
           category_id: "",
           description: "",
           date: todayLocal(),
-          notes: "",
         },
   });
 
@@ -100,7 +90,6 @@ export function TransactionDialog({ categories, transaction }: Props) {
         category_id: "",
         description: "",
         date: todayLocal(),
-        notes: "",
       });
     }
   }, [open, isEdit, reset]);
@@ -110,9 +99,8 @@ export function TransactionDialog({ categories, transaction }: Props) {
     fd.set("type", data.type);
     fd.set("amount", String(data.amount));
     fd.set("category_id", data.category_id);
-    fd.set("description", data.description);
+    fd.set("description", data.description ?? "");
     fd.set("date", data.date);
-    fd.set("notes", data.notes ?? "");
 
     const result = isEdit
       ? await updateTransaction(transaction!.id, fd)
@@ -206,7 +194,8 @@ export function TransactionDialog({ categories, transaction }: Props) {
             {/* Description */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Description
+                Description{" "}
+                <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <input
                 type="text"
@@ -224,24 +213,17 @@ export function TransactionDialog({ categories, transaction }: Props) {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Category
               </label>
-              <Controller
-                control={control}
-                name="category_id"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger className="w-full h-10 bg-gray-50 border-gray-200">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredCategories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
+              <select
+                {...register("category_id")}
+                className={cn(inputClass, "cursor-pointer")}
+              >
+                <option value="">Select category</option>
+                {filteredCategories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
               {errors.category_id && (
                 <p className="mt-1.5 text-xs text-red-600">{errors.category_id.message}</p>
               )}
@@ -259,23 +241,6 @@ export function TransactionDialog({ categories, transaction }: Props) {
               />
               {errors.date && (
                 <p className="mt-1.5 text-xs text-red-600">{errors.date.message}</p>
-              )}
-            </div>
-
-            {/* Notes */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Notes{" "}
-                <span className="text-gray-400 font-normal">(optional)</span>
-              </label>
-              <textarea
-                rows={2}
-                placeholder="Any extra detail…"
-                {...register("notes")}
-                className={cn(inputClass, "resize-none")}
-              />
-              {errors.notes && (
-                <p className="mt-1.5 text-xs text-red-600">{errors.notes.message}</p>
               )}
             </div>
 

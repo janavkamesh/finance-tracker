@@ -7,11 +7,10 @@ import { transactionSchema } from "@/lib/validations/transaction";
 export async function addTransaction(formData: FormData) {
   const raw = {
     type: formData.get("type"),
-    amount: formData.get("amount"),
+    amount: Number(formData.get("amount")),
     category_id: formData.get("category_id"),
-    description: formData.get("description"),
+    description: (formData.get("description") as string) || undefined,
     date: formData.get("date"),
-    notes: formData.get("notes") || undefined,
   };
 
   const parsed = transactionSchema.safeParse(raw);
@@ -28,7 +27,8 @@ export async function addTransaction(formData: FormData) {
   const { error } = await supabase.from("transactions").insert({
     ...parsed.data,
     user_id: user.id,
-    notes: parsed.data.notes ?? null,
+    description: parsed.data.description ?? "",
+    notes: null,
   });
 
   if (error) return { error: error.message };
@@ -39,11 +39,10 @@ export async function addTransaction(formData: FormData) {
 export async function updateTransaction(id: string, formData: FormData) {
   const raw = {
     type: formData.get("type"),
-    amount: formData.get("amount"),
+    amount: Number(formData.get("amount")),
     category_id: formData.get("category_id"),
-    description: formData.get("description"),
+    description: (formData.get("description") as string) || undefined,
     date: formData.get("date"),
-    notes: formData.get("notes") || undefined,
   };
 
   const parsed = transactionSchema.safeParse(raw);
@@ -59,7 +58,7 @@ export async function updateTransaction(id: string, formData: FormData) {
 
   const { error } = await supabase
     .from("transactions")
-    .update({ ...parsed.data, notes: parsed.data.notes ?? null })
+    .update({ ...parsed.data, description: parsed.data.description ?? "", notes: null })
     .eq("id", id)
     .eq("user_id", user.id);
 

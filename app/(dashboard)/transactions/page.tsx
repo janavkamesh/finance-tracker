@@ -237,7 +237,6 @@ export default async function TransactionsPage({
                         category_id: txn.category_id,
                         description: txn.description,
                         date: txn.date,
-                        notes: txn.notes,
                       }}
                     />
                     <DeleteTransactionButton id={txn.id} />
