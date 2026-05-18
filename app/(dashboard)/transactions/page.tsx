@@ -4,7 +4,7 @@ import { Suspense } from "react";
 export const metadata: Metadata = {
   title: "Transactions — FinTrack India",
 };
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { formatINR } from "@/lib/utils";
 import { TransactionDialog } from "@/components/transactions/transaction-dialog";
 import { DeleteTransactionButton } from "@/components/transactions/delete-transaction-button";
@@ -47,10 +47,7 @@ export default async function TransactionsPage({
   const categoryFilter =
     typeof filters.category === "string" ? filters.category : "";
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [user, supabase] = await Promise.all([getUser(), createClient()]);
 
   // Categories for filter dropdown + add/edit dialog
   const { data: categories } = await supabase

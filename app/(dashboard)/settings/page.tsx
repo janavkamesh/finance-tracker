@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Settings — FinTrack India",
@@ -31,10 +31,7 @@ const TYPE_STYLE: Record<string, string> = {
 };
 
 export default async function SettingsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [user, supabase] = await Promise.all([getUser(), createClient()]);
 
   const [{ data: profile }, { data: categories }] = await Promise.all([
     supabase

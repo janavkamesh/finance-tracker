@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: "Dashboard — FinTrack India",
 };
 import { ArrowRight } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { formatINR } from "@/lib/utils";
 import { MonthlyBarChart, type MonthlyData } from "@/components/dashboard/monthly-bar-chart";
 import { CategoryPieChart, type CategorySlice } from "@/components/dashboard/category-pie-chart";
@@ -18,10 +18,7 @@ function pad(n: number) {
 }
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [user, supabase] = await Promise.all([getUser(), createClient()]);
 
   const now = new Date();
   const thisYear = now.getFullYear();

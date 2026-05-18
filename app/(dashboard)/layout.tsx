@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getUser } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileHeader } from "@/components/layout/mobile-header";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -8,30 +8,22 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   let fullName = "User";
   let userInitials = "U";
 
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", user.id)
-      .single();
-
-    if (profile?.full_name) {
-      fullName = profile.full_name;
-      userInitials = profile.full_name
-        .split(" ")
-        .slice(0, 2)
-        .map((n: string) => n[0])
-        .join("")
-        .toUpperCase();
-    }
+  // user_metadata is set by updateProfile — no extra DB round-trip needed
+  const name =
+    (user?.user_metadata?.full_name as string | undefined) ?? "";
+  if (name) {
+    fullName = name;
+    userInitials = name
+      .split(" ")
+      .slice(0, 2)
+      .map((n: string) => n[0])
+      .join("")
+      .toUpperCase();
   }
 
   return (

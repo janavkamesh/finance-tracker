@@ -4,7 +4,7 @@ import { Suspense } from "react";
 export const metadata: Metadata = {
   title: "Insights — FinTrack India",
 };
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { formatINR } from "@/lib/utils";
 import { AreaTrendChart, type MonthPoint } from "@/components/reports/area-trend-chart";
 import { YearSelector } from "@/components/reports/year-selector";
@@ -34,10 +34,7 @@ export default async function ReportsPage({
       ? Number(params.year)
       : currentYear;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [user, supabase] = await Promise.all([getUser(), createClient()]);
 
   const { data: txns } = await supabase
     .from("transactions")
