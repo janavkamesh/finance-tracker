@@ -145,27 +145,37 @@ export function QuickAddForm({ categories }: Props) {
           </div>
 
           {/* Category */}
-          <CustomSelect
-            options={categoryOptions}
-            value={categoryId}
-            onChange={setCategoryId}
-            className="w-full sm:w-40 [&>button]:bg-gray-50"
-          />
+          <div className="flex flex-col gap-0.5">
+            <label className="px-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+              Category
+            </label>
+            <CustomSelect
+              options={categoryOptions}
+              value={categoryId}
+              onChange={setCategoryId}
+              className="w-full sm:w-40 [&>button]:bg-gray-50"
+            />
+          </div>
 
           {/* Payment method */}
-          <CustomSelect
-            options={paymentOptions}
-            value={paymentMethod}
-            onChange={setPaymentMethod}
-            className="w-full sm:w-36 [&>button]:bg-gray-50"
-          />
+          <div className="flex flex-col gap-0.5">
+            <label className="px-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+              Payment Method
+            </label>
+            <CustomSelect
+              options={paymentOptions}
+              value={paymentMethod}
+              onChange={setPaymentMethod}
+              className="w-full sm:w-36 [&>button]:bg-gray-50"
+            />
+          </div>
 
           {/* Description */}
           <input
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Note (optional)"
+            placeholder="Description (optional)"
             maxLength={255}
             className={cn(
               "h-9 flex-1 min-w-0 rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900",

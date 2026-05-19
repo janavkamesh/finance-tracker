@@ -2134,3 +2134,16 @@ Replaced the ad-hoc flex layout on individual transaction rows with a strict CSS
 - **Col 3 — Amount (20%, right-aligned)**: Income shown in `text-green-600` with `+` prefix; expenses in `text-red-600` with `-` prefix. Right-aligned `tabular-nums` ensures amounts stack cleanly.
 - **Col 4 — Actions (15%, right-aligned)**: Edit and Delete icon buttons pinned to the far right edge via `justify-end`. Hidden for optimistic rows.
 - **Checkbox compatibility**: The selection-mode checkbox remains as a leading flex item outside the grid so it does not disturb column proportions when toggled.
+
+---
+
+## Phase 73 — Quick Add Form: Dropdown Labels & Description Placeholder
+
+### Feature
+Improved clarity and accessibility of the Quick Add transaction strip inputs.
+
+### UX Design & Changes
+- **Category label**: Added a small `10px / uppercase / tracked / gray-400` label reading "Category" directly above the category dropdown. Once a value is selected the label keeps the field identifiable at a glance.
+- **Payment Method label**: Same premium label treatment applied above the payment method dropdown, reading "Payment Method". Solves the context-loss problem where the selected value (e.g. "UPI") gives no hint of what the field represents.
+- **Description placeholder**: Changed the free-text input placeholder from "Note (optional)" to "Description (optional)" — language consistent with financial ledger conventions and the rest of the app.
+- Each labelled dropdown is wrapped in a `flex flex-col gap-0.5` container so the label sits flush above its control without disturbing the row's horizontal flex layout on desktop or the stacked layout on mobile.
