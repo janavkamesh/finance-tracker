@@ -1669,3 +1669,85 @@ Replaced `<select>` for category in the transaction dialog and recurring dialog 
   - `> 5 days`: Neutral, muted gray badge.
   - `<= 3 days`: Subtle warning state utilizing orange text and background tints to draw eye focus.
 - **"Mark as Paid" Interaction:** Added a hover-reveal `CheckCircle2` action button alongside each bill amount. Clicking this action is hooked into the existing `TransactionDialog`, securely passing a `prefill` data object (containing the bill's amount, category, and description) to instantly launch the modal ready for one-tap submission.
+
+---
+
+## Phase 48 — Performance Overhaul (Optimistic UI + Client-Side Filtering)
+
+### Feature 1 — Optimistic Add Transaction
+
+**Problem:** After submitting the Add Transaction modal, users waited 2–3 seconds watching a spinner while the server action completed — a jarring UX dead zone.
+
+**Solution:** Fully optimistic add flow: the modal closes instantly, the new row appears in the list immediately, and the server write happens in the background. If it fails, the row is silently rolled back with an error toast.
+
+**`components/transactions/transaction-dialog.tsx`:**
+- Added two optional props: `onOptimisticAdd(data)` and `onOptimisticRemove(tempId)`.
+- In add mode `onSubmit`: generates a unique `opt-{timestamp}-{random}` temp ID, calls `onOptimisticAdd` with the full row data, closes the dialog immediately, shows a success toast, then fires `addTransaction` async. On error, calls `onOptimisticRemove` to remove the row and shows an error toast.
+- Edit mode remains fully synchronous (unchanged behaviour).
+
+**`components/transactions/transaction-manager.tsx`:**
+- `addOptimistic` — looks up the category from props to populate category name/color/icon fields, prepends the row to local state, and resets `typeTab` to "all" so the new row is always visible.
+- `removeOptimistic` — filters the temp row out of local state on server error.
+- Optimistic rows render at `opacity-70` with a "saving…" label. Their checkbox is disabled and edit/delete actions are hidden.
+- Passes `onOptimisticAdd` and `onOptimisticRemove` through to `<TransactionDialog>`.
+
+**`app/(dashboard)/transactions/page.tsx`:**
+- Removed the standalone `<TransactionDialog>` from the page header — `TransactionManager` now owns the Add button with full optimistic support.
+
+---
+
+### Feature 2 — Instant Type-Tab Switching (0 ms, Client-Side)
+
+**Problem:** Clicking the Income or Expense filter tab triggered a full server round-trip (URL param change → page re-render → DB query) causing a visible 2–3 second delay.
+
+**Solution:** Type tabs are now pure client-side state managed inside `TransactionManager`. Filtering happens via `useMemo` on the already-loaded transactions array — no network request, no URL change, zero perceptible delay.
+
+**`components/transactions/transaction-filters.tsx`:**
+- Removed the All / Income / Expense toggle button group entirely.
+- Removed `currentType` URL param read and `hasActiveFilters` dependency on it.
+- Filters now only manage: search (debounced 350 ms), period, category, and the export kebab menu.
+
+**`components/transactions/transaction-manager.tsx`:**
+- Added `typeTab` state (`"all" | "income" | "expense"`) defaulting to `"all"`.
+- `TYPE_TABS` constant drives a horizontal pill row rendered above the filter row.
+- `displayedTransactions` — `useMemo` that applies the typeTab filter to the full local `transactions` array. O(n) in-memory, result appears in the same render frame.
+- `incomeCount` / `expenseCount` — separate memos computed from the full (un-typeTab-filtered) array so badges always show accurate totals regardless of active tab.
+- `handleTypeTab(tab)` — sets typeTab and clears bulk selection.
+- Tabs are colour-coded: Income = green, Expense = red, All = brand green (`#1E6B4E`).
+- Empty tab state: when the current tab yields zero rows but other types exist, a polite message is shown ("No income transactions in this period") without nuking the whole list UI.
+
+**`app/(dashboard)/transactions/page.tsx`:**
+- Removed server-side `typeFilter` from both the main Supabase query and the previous-period comparison query. The server now always returns all transaction types for the active period; the client handles type filtering.
+
+---
+
+## Phase 49 — Modal Interaction Bug Fix (Click-Outside, Bubbling, Layout Gap)
+
+### Problem 1 — Backdrop Click Did Not Close the Add Transaction Modal
+
+**Root cause:** `DialogContent` (Base UI `Dialog.Popup`) rendered a backdrop via `DialogOverlay` but no explicit `onClick` was wired to close the dialog when the overlay was clicked.
+
+**Fix:**
+- `components/ui/dialog.tsx`: Added `onClose?: () => void` prop to `DialogContent`. The prop is forwarded as `onClick` to `DialogOverlay`, which passes it as `onClick` to `DialogPrimitive.Backdrop`. Typing updated: `DialogOverlay` now accepts `onClick?: React.MouseEventHandler` in addition to its existing `DialogPrimitive.Backdrop.Props`.
+- `components/transactions/transaction-dialog.tsx`: Passes `onClose={() => setOpen(false)}` to `<DialogContent>` so the backdrop click explicitly closes the modal.
+
+---
+
+### Problem 2 — Nested Dialog Caused Event Bubbling (Both Modals Closed Together)
+
+**Root cause:** `CategoryPicker` implemented the category selector as a second `Dialog` (with its own full-screen `Dialog.Backdrop` at `z-50`) nested inside the Transaction modal. When either backdrop was clicked, the events could propagate between the two Base UI Dialog roots, causing both to close simultaneously. Pressing Escape also closed both.
+
+**Fix:**
+- `components/transactions/category-picker.tsx`: Removed the entire nested `Dialog` / `DialogContent` pattern. Replaced with a **portal-rendered overlay panel** using `createPortal(panel, document.body)`.
+  - The outer backdrop div (`fixed inset-0 z-[60]`) has `onMouseDown={handleClose}` — clicking anywhere on it closes *only* the category picker.
+  - The inner panel div has `onMouseDown={e => e.stopPropagation()}` — clicks inside the panel never reach the backdrop handler and never propagate to the parent Transaction dialog.
+  - Escape key: added a `document.addEventListener('keydown', handler, true)` in **capture phase** so the picker's Escape handler fires before Base UI's Transaction dialog handler, calls `e.stopImmediatePropagation()`, and closes only the picker.
+  - `mounted` state + `useEffect(() => setMounted(true), [])` guard ensures the portal only renders client-side (safe for Next.js SSR).
+
+---
+
+### Problem 3 — ~20px Visual Gap Around Category Panel
+
+**Root cause:** The nested `Dialog` approach used Base UI's `Dialog.Popup` with `fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2` positioning relative to the viewport *and* the `p-4 gap-4` defaults from `DialogContent` (even when overridden with `p-0 gap-0`, the dialog's own frame and the white/blurred `overlayClassName` created a visual discontinuity layer around the panel, appearing as a gap).
+
+**Fix:** The new portal panel uses a single wrapper div (`fixed inset-0 z-[60] flex items-center justify-center`) with the inner panel (`relative w-full max-w-sm rounded-xl bg-white border border-gray-200 shadow-2xl overflow-hidden`) positioned precisely via flexbox centering. No extra offsets, no intermediate wrapper padding — the panel sits flush with its own border-radius at the exact visual center. All inner section padding (`px-4 pt-4 pb-3`, etc.) is preserved from the original design.

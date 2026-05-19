@@ -25,8 +25,9 @@ function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
 
 function DialogOverlay({
   className,
+  onClick,
   ...props
-}: DialogPrimitive.Backdrop.Props) {
+}: DialogPrimitive.Backdrop.Props & { onClick?: React.MouseEventHandler }) {
   return (
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
@@ -34,6 +35,7 @@ function DialogOverlay({
         "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
+      onClick={onClick}
       {...props}
     />
   )
@@ -44,14 +46,17 @@ function DialogContent({
   children,
   showCloseButton = true,
   overlayClassName,
+  onClose,
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
   overlayClassName?: string
+  /** Called when the backdrop overlay is clicked — use to close the dialog */
+  onClose?: () => void
 }) {
   return (
     <DialogPortal>
-      <DialogOverlay className={overlayClassName} />
+      <DialogOverlay className={overlayClassName} onClick={onClose} />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(

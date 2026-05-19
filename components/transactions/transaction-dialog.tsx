@@ -33,6 +33,16 @@ interface Transaction {
   payment_method?: string | null;
 }
 
+interface OptimisticData {
+  tempId: string;
+  type: "income" | "expense";
+  amount: number;
+  category_id: string;
+  description: string;
+  date: string;
+  payment_method?: string | null;
+}
+
 interface Props {
   categories: Category[];
   transaction?: Transaction;
@@ -41,6 +51,11 @@ interface Props {
    *  field defaults to the 1st of that month so the user stays in context.
    *  Current/future months fall back to today. */
   activeMonth?: string;
+  /** Called immediately before the server action fires — lets the parent
+   *  render the new row optimistically with a temp ID. */
+  onOptimisticAdd?: (data: OptimisticData) => void;
+  /** Called if the server action fails — removes the optimistic row. */
+  onOptimisticRemove?: (tempId: string) => void;
 }
 
 // ── Payment methods ───────────────────────────────────────────────
@@ -170,7 +185,7 @@ function getInitialDate(activeMonth?: string): string {
 }
 
 // ── Main dialog ───────────────────────────────────────────────────
-export function TransactionDialog({ categories, transaction, triggerVariant = "primary", activeMonth }: Props) {
+export function TransactionDialog({ categories, transaction, triggerVariant = "primary", activeMonth, onOptimisticAdd, onOptimisticRemove }: Props) {
   const [open, setOpen] = useState(false);
   const [showCalc, setShowCalc] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string>(
@@ -238,14 +253,36 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
     fd.set("date", data.date);
     if (paymentMethod) fd.set("payment_method", paymentMethod);
 
-    const result = isEdit
-      ? await updateTransaction(transaction!.id, fd)
-      : await addTransaction(fd);
+    if (!isEdit) {
+      // ── Optimistic path ───────────────────────────────────────────────
+      // Close the dialog and confirm immediately. The DB write is async.
+      const tempId = `opt-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      onOptimisticAdd?.({
+        tempId,
+        type: data.type,
+        amount: data.amount,
+        category_id: data.category_id,
+        description: data.description ?? "",
+        date: data.date,
+        payment_method: paymentMethod || null,
+      });
+      setOpen(false);
+      toast.success("Transaction added");
+      // Background write — rollback on failure
+      const result = await addTransaction(fd);
+      if (result?.error) {
+        onOptimisticRemove?.(tempId);
+        toast.error(`Couldn't save — ${result.error}`);
+      }
+      return;
+    }
 
+    // ── Edit path (synchronous — confirmation matters before close) ───
+    const result = await updateTransaction(transaction!.id, fd);
     if (result?.error) {
       toast.error(result.error);
     } else {
-      toast.success(isEdit ? "Transaction updated" : "Transaction added");
+      toast.success("Transaction updated");
       setOpen(false);
     }
   }
@@ -282,7 +319,7 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" onClose={() => setOpen(false)}>
           <DialogHeader>
             <DialogTitle>
               {isEdit ? "Edit Transaction" : "Add Transaction"}
