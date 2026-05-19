@@ -90,25 +90,10 @@ function getPreviousDateRange(period: string): { start: string; end?: string } |
   return null;
 }
 
-function formatShorthand(n: number): string {
-  const abs = Math.abs(n);
-  if (abs >= 100_000) return `₹${(abs / 100_000).toFixed(1)}L`;
-  if (abs >= 1_000) return `₹${(abs / 1_000).toFixed(1)}K`;
-  return `₹${Math.round(abs)}`;
-}
-
-function DeltaBadge({ current, previous }: { current: number; previous: number; type?: "income" | "expense" | "net" }) {
-  if (previous === 0) return null;
-  const delta = current - previous;
-  if (delta === 0) return null;
-
-  const icon = delta > 0 ? "↑" : "↓";
-
-  return (
-    <span className="text-[11px] font-medium text-gray-400 tabular-nums">
-      {icon} {formatShorthand(delta)}
-    </span>
-  );
+function computeDelta(current: number, previous: number) {
+  if (previous === 0 || current === previous) return null;
+  const pct = ((current - previous) / Math.abs(previous)) * 100;
+  return { up: pct > 0, label: `${Math.abs(pct).toFixed(0)}%` };
 }
 
 export default async function TransactionsPage({
@@ -200,11 +185,15 @@ export default async function TransactionsPage({
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const prevNet = prevIncome - prevExpense;
 
+  const incDelta = computeDelta(totalIncome, prevIncome);
+  const expDelta = computeDelta(totalExpense, prevExpense);
+  const netDelta = computeDelta(net, prevNet);
+
   return (
-    <main className="p-6 md:p-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
+    <>
+      {/* Sticky header — identical height/padding to Home */}
+      <div className="sticky top-14 md:top-0 z-10 bg-white border-b border-gray-100 h-[88px] px-6 md:px-8 flex items-center justify-between gap-4">
+        <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold text-gray-900">Transactions</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             {txns.length === 0
@@ -212,91 +201,91 @@ export default async function TransactionsPage({
               : `${txns.length} transaction${txns.length !== 1 ? "s" : ""} found`}
           </p>
         </div>
-        <div className="flex items-center gap-2" />
       </div>
 
-      <div className="w-full">
-        <div className="min-w-0">
-          {/* Summary stats */}
-      <div className="grid grid-cols-3 gap-3 mb-5">
-        {/* Income */}
-        <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-green-500 shrink-0" />
-            <p className="text-xs text-gray-500">Income</p>
+      <main className="px-6 md:px-8 pb-8 pt-4">
+        {/* Summary cards — 1:1 identical structure to Home */}
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="h-2 w-2 rounded-full bg-green-500" />
+              <span className="text-xs text-gray-500">Income</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <p className="text-lg font-bold tabular-nums text-green-600">{formatINR(totalIncome)}</p>
+              {incDelta && (
+                <span className="text-[11px] font-medium tabular-nums text-gray-400 truncate">
+                  {incDelta.up ? "↑" : "↓"} {incDelta.label}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <p className="text-base font-semibold text-green-600 tabular-nums">
-              {formatINR(totalIncome)}
-            </p>
-            <DeltaBadge current={totalIncome} previous={prevIncome} type="income" />
+          <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="h-2 w-2 rounded-full bg-red-500" />
+              <span className="text-xs text-gray-500">Expenses</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <p className="text-lg font-bold tabular-nums text-red-600">{formatINR(totalExpense)}</p>
+              {expDelta && (
+                <span className="text-[11px] font-medium tabular-nums text-gray-400 truncate">
+                  {expDelta.up ? "↑" : "↓"} {expDelta.label}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className={`h-2 w-2 rounded-full ${net >= 0 ? "bg-green-500" : "bg-red-500"}`} />
+              <span className="text-xs text-gray-500">Net</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <p className={`text-lg font-bold tabular-nums ${net >= 0 ? "text-green-600" : "text-red-600"}`}>
+                {net >= 0 ? "+" : ""}{formatINR(net)}
+              </p>
+              {netDelta && (
+                <span className="text-[11px] font-medium tabular-nums text-gray-400 truncate">
+                  {netDelta.up ? "↑" : "↓"} {netDelta.label}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Expenses */}
-        <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
-            <p className="text-xs text-gray-500">Expenses</p>
-          </div>
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <p className="text-base font-semibold text-red-600 tabular-nums">
-              {formatINR(totalExpense)}
-            </p>
-            <DeltaBadge current={totalExpense} previous={prevExpense} type="expense" />
-          </div>
-        </div>
-
-        {/* Net Savings */}
-        <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${net >= 0 ? "bg-green-500" : "bg-red-500"}`} />
-            <p className="text-xs text-gray-500">Net Savings</p>
-          </div>
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <p className={`text-base font-semibold tabular-nums ${net >= 0 ? "text-green-600" : "text-red-600"}`}>
-              {net >= 0 ? "+" : ""}{formatINR(net)}
-            </p>
-            <DeltaBadge current={net} previous={prevNet} type="net" />
-          </div>
-        </div>
-      </div>
-
-      {/* Transaction list + filters — always mounted so the search input never loses focus.
-          Empty-state rendering is handled inside TransactionManager. */}
-      <Suspense fallback={null}>
-        <TransactionManager
-          initialTransactions={txns.slice(0, 20).map((txn) => {
-            const cat = txn.categories as
-              | { name: string; color: string | null; type: string; user_id: string | null }
-              | null;
-            return {
-              id: txn.id,
-              type: txn.type as "income" | "expense",
-              amount: Number(txn.amount),
-              date: txn.date,
-              description: txn.description ?? "",
-              category_id: txn.category_id ?? "",
-              payment_method: (txn as Record<string, unknown>).payment_method as string | null ?? null,
-              category_name: cat?.name ?? null,
-              category_color: cat?.color ?? null,
-              category_icon: null,
-              category_user_id: cat?.user_id ?? null,
-            };
-          })}
-          categories={cats}
-          activeMonth={activePeriodMonth}
-          emptyMessage={emptyFilterMessage}
-          filters={{
-            search: "",
-            typeFilter,
-            categoryFilter,
-            period,
-          }}
-        />
-      </Suspense>
-        </div>
-      </div>
-    </main>
+        {/* Transaction list + filters — always mounted so the search input never loses focus.
+            Empty-state rendering is handled inside TransactionManager. */}
+        <Suspense fallback={null}>
+          <TransactionManager
+            initialTransactions={txns.slice(0, 20).map((txn) => {
+              const cat = txn.categories as
+                | { name: string; color: string | null; type: string; user_id: string | null }
+                | null;
+              return {
+                id: txn.id,
+                type: txn.type as "income" | "expense",
+                amount: Number(txn.amount),
+                date: txn.date,
+                description: txn.description ?? "",
+                category_id: txn.category_id ?? "",
+                payment_method: (txn as Record<string, unknown>).payment_method as string | null ?? null,
+                category_name: cat?.name ?? null,
+                category_color: cat?.color ?? null,
+                category_icon: null,
+                category_user_id: cat?.user_id ?? null,
+              };
+            })}
+            categories={cats}
+            activeMonth={activePeriodMonth}
+            emptyMessage={emptyFilterMessage}
+            filters={{
+              search: "",
+              typeFilter,
+              categoryFilter,
+              period,
+            }}
+          />
+        </Suspense>
+      </main>
+    </>
   );
 }
