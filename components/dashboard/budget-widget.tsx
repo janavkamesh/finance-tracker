@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { LayoutList, ChevronDown, ChevronUp } from "lucide-react";
 import { formatINR, cn } from "@/lib/utils";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { BudgetSetupDialog } from "@/components/dashboard/budget-setup-dialog";
@@ -202,8 +202,9 @@ export function BudgetWidget({
 
   return (
     <div className="rounded-xl border border-gray-100 bg-white px-5 py-4 mb-6">
-      {/* ── Header row: title + edit + rollover + pct ── */}
-      <div className="flex items-center justify-between mb-2.5">
+
+      {/* ── Header row: title + edit + rollover + pct used ── */}
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-gray-900">Monthly budget</span>
           <BudgetSetupDialog
@@ -227,15 +228,56 @@ export function BudgetWidget({
         </span>
       </div>
 
-      {/* ── Progress bar ── */}
-      <div className="h-2 w-full rounded-full bg-gray-100">
-        <div
-          className={cn("h-2 rounded-full transition-all", barColor)}
-          style={{ width: `${pct}%` }}
-        />
+      {/* ── Progress bar row + Category Breakdown button ── */}
+      {/*
+          Layout: the bar is flex-1 so it fills all remaining space; the
+          "Category Breakdown" button sits to its right as a shrink-0 sibling.
+          The relative wrapper is full-width so the popover's right-0 aligns
+          it to the card's right edge, not just the button edge.
+      */}
+      <div className="relative flex items-center gap-3">
+        {/* Progress bar — fills remaining row width */}
+        <div className="h-2 flex-1 min-w-0 rounded-full bg-gray-100">
+          <div
+            className={cn("h-2 rounded-full transition-all", barColor)}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+
+        {/* Category Breakdown button — prominent, anchors the popover */}
+        {hasBreakdown && (
+          <>
+            <button
+              type="button"
+              onClick={() => setBreakdownOpen((v) => !v)}
+              className={cn(
+                "inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E6B4E]/40",
+                breakdownOpen
+                  ? "border-[#1E6B4E]/50 bg-[#1E6B4E]/8 text-[#1E6B4E]"
+                  : "border-[#1E6B4E]/25 bg-white text-[#1E6B4E] hover:border-[#1E6B4E]/50 hover:bg-[#1E6B4E]/5"
+              )}
+              aria-expanded={breakdownOpen}
+              aria-label="Toggle category breakdown"
+            >
+              <LayoutList className="size-3.5" />
+              Category Breakdown
+              {breakdownOpen
+                ? <ChevronUp className="size-3" />
+                : <ChevronDown className="size-3" />
+              }
+            </button>
+
+            {breakdownOpen && (
+              <BreakdownPopover
+                items={categoryLimitItems}
+                onClose={() => setBreakdownOpen(false)}
+              />
+            )}
+          </>
+        )}
       </div>
 
-      {/* ── Footer row: remaining/over + safe-to-spend + breakdown toggle ── */}
+      {/* ── Footer row: remaining/over + safe-to-spend ── */}
       <div className="mt-1.5 flex items-center justify-between gap-3">
         <p
           className={cn(
@@ -248,45 +290,13 @@ export function BudgetWidget({
             : `${formatINR(remaining)} remaining`}
         </p>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {safeToSpend > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#1E6B4E]/8 px-2.5 py-0.5 text-xs font-semibold text-[#1E6B4E] tabular-nums">
-              Safe to spend today: {formatINR(safeToSpend)}
-            </span>
-          )}
-
-          {/* View Breakdown toggle — anchors the popover */}
-          {hasBreakdown && (
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setBreakdownOpen((v) => !v)}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors",
-                  breakdownOpen
-                    ? "bg-gray-200 text-gray-700"
-                    : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
-                )}
-                aria-label="Toggle category breakdown"
-              >
-                Breakdown
-                {breakdownOpen ? (
-                  <ChevronUp className="size-3" />
-                ) : (
-                  <ChevronDown className="size-3" />
-                )}
-              </button>
-
-              {breakdownOpen && (
-                <BreakdownPopover
-                  items={categoryLimitItems}
-                  onClose={() => setBreakdownOpen(false)}
-                />
-              )}
-            </div>
-          )}
-        </div>
+        {safeToSpend > 0 && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-[#1E6B4E]/8 px-2.5 py-0.5 text-xs font-semibold text-[#1E6B4E] tabular-nums">
+            Safe to spend today: {formatINR(safeToSpend)}
+          </span>
+        )}
       </div>
+
     </div>
   );
 }

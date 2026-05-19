@@ -1778,14 +1778,20 @@ Replaced `<select>` for category in the transaction dialog and recurring dialog 
 
 ---
 
-### Feature: Category Breakdown Popover
+### Feature: Category Breakdown Popover (Phase 51 redesign)
 
-**UX decision:** Placed a compact "Breakdown ↓" pill button at the far right of the budget card footer, adjacent to the "Safe to spend" pill. Opens a floating card anchored below (`top-full mt-2`), `z-30`, click-outside + Escape to dismiss (Escape uses capture phase to avoid closing the parent dialog).
+**UX decision (Phase 51):** Applied progressive disclosure — category bars are hidden by default and revealed on intentional click only. The old standalone `<CategoryLimits>` section has been removed from the dashboard document flow to eliminate visual clutter.
 
-**`components/dashboard/budget-widget.tsx`** (new client component):
-- Extracts the budget card from the dashboard server component IIFE into a proper client component
-- `BudgetWidget` owns `breakdownOpen` toggle state
-- `BreakdownPopover` renders per-category rows with: icon (via `getCategoryIcon`), name, color-coded progress bar, `spent / limit`, percentage used, and remaining amount
-- Color coding: green `#1E6B4E` → amber → red (≥80% → ≥100%)
-- Popover is only rendered when `categoryLimitItems.length > 0` (zero clutters the UI)
-- `CategoryLimits` component below the budget widget is preserved — the popover is additive, not a replacement
+**Trigger button upgrade:** The small "Breakdown" pill was replaced with a prominent secondary-style "Category Breakdown" button (white bg, green border, `LayoutList` icon, `ChevronDown/Up` open state indicator). It sits inline with the progress bar on the same row — the bar is `flex-1` so it yields space naturally, no hardcoded widths needed.
+
+**Popover positioning:** The `relative` wrapper spans the full progress-bar row width so `right-0` aligns the popover to the card edge, not just the button edge. Drops below (`top-full mt-2`), `z-30`, `w-72 sm:w-80`.
+
+**`components/dashboard/budget-widget.tsx`**:
+- `BreakdownPopover` internals unchanged — click-outside via `mousedown` + Escape in capture phase
+- `BudgetWidget` layout restructured: header row → progress bar + button row → footer row
+- `LayoutList`, `ChevronDown`, `ChevronUp` icons from lucide-react
+- Popover only rendered when `categoryLimitItems.length > 0`
+
+**`app/(dashboard)/dashboard/page.tsx`**:
+- Removed `import { CategoryLimits }` and the `<CategoryLimits items={categoryLimitItems} />` JSX block
+- `categoryLimitItems` data still computed and passed to `BudgetWidget` for the popover

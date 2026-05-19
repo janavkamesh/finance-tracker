@@ -10,7 +10,6 @@ import { formatINR } from "@/lib/utils";
 import { type MonthlyData } from "@/components/dashboard/monthly-bar-chart";
 import { TrendChartCard } from "@/components/dashboard/trend-chart-card";
 import { CategoryPieChart, type CategorySlice } from "@/components/dashboard/category-pie-chart";
-import { CategoryLimits } from "@/components/dashboard/category-limits";
 import { DueRecurringCard } from "@/components/dashboard/due-recurring-card";
 import { BudgetWidget } from "@/components/dashboard/budget-widget";
 import { BudgetSetupDialog } from "@/components/dashboard/budget-setup-dialog";
@@ -354,9 +353,6 @@ export default async function DashboardPage() {
 
       {/* Due recurring transactions */}
       <DueRecurringCard items={dueItems} />
-
-      {/* Category spending limits */}
-      <CategoryLimits items={categoryLimitItems} />
 
       {/* Charts row */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 mb-6">
