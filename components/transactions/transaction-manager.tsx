@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
-import { format, isToday, isYesterday } from "date-fns";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { TransactionFilters } from "./transaction-filters";
 import { TransactionDialog } from "./transaction-dialog";
 import { DeleteTransactionButton } from "./delete-transaction-button";
 import { BulkActionsBar } from "./bulk-actions-bar";
 import { getCategoryIcon } from "@/lib/category-icons";
-import { formatINR } from "@/lib/utils";
+import { formatINR, cn } from "@/lib/utils";
 import { fetchTransactionsBatch } from "@/app/actions/transactions";
 
 interface TxnRow {
@@ -44,52 +43,64 @@ interface Props {
 }
 
 function getGroupLabel(dateString: string) {
-  const dateObj = new Date(dateString + "T00:00:00");
-  if (isToday(dateObj)) return "Today";
-  if (isYesterday(dateObj)) return "Yesterday";
-  return format(dateObj, "MMM d, yyyy");
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
+  if (dateString === todayStr) return "Today";
+  if (dateString === yesterdayStr) return "Yesterday";
+  return new Date(dateString + "T00:00:00").toLocaleDateString("en-IN", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
+const TYPE_TABS = [
+  { value: "all",     label: "All" },
+  { value: "income",  label: "Income" },
+  { value: "expense", label: "Expense" },
+] as const;
+
 export function TransactionManager({ initialTransactions, categories, activeMonth, filters }: Props) {
+  // ── Selection state ───────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Infinite Scroll State
+  // ── Type tab — client-side, zero latency ──────────────────────────
+  const [typeTab, setTypeTab] = useState<"all" | "income" | "expense">("all");
+
+  // ── Infinite scroll state ─────────────────────────────────────────
   const [transactions, setTransactions] = useState<TxnRow[]>(initialTransactions);
   const [hasMore, setHasMore] = useState(initialTransactions.length === 20);
   const [isFetching, setIsFetching] = useState(false);
   const [offset, setOffset] = useState(20);
 
-  // Sync state if initialTransactions change (e.g. from filters)
+  // Sync when server-side filters change (search / period / category)
   useEffect(() => {
     setTransactions(initialTransactions);
     setOffset(20);
     setHasMore(initialTransactions.length === 20);
     setSelectedIds(new Set());
+    // Keep typeTab so switching period doesn't reset the user's tab choice
   }, [initialTransactions]);
 
+  // ── Infinite scroll observer ──────────────────────────────────────
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const loadMore = useCallback(async () => {
     if (isFetching || !hasMore || !filters) return;
     setIsFetching(true);
     try {
-      const newBatch = await fetchTransactionsBatch({
-        ...filters,
-        offset,
-        limit: 20
-      });
+      const newBatch = await fetchTransactionsBatch({ ...filters, offset, limit: 20 });
       if (newBatch.length > 0) {
         setTransactions((prev) => {
-           // simple deduplication based on ID just in case
-           const existingIds = new Set(prev.map(t => t.id));
-           const filteredBatch = newBatch.filter(t => !existingIds.has(t.id));
-           return [...prev, ...filteredBatch];
+          const existingIds = new Set(prev.map((t) => t.id));
+          return [...prev, ...newBatch.filter((t) => !existingIds.has(t.id))];
         });
         setOffset((prev) => prev + newBatch.length);
       }
-      if (newBatch.length < 20) {
-        setHasMore(false);
-      }
+      if (newBatch.length < 20) setHasMore(false);
     } catch (e) {
       console.error("Error fetching transactions batch:", e);
     } finally {
@@ -99,24 +110,66 @@ export function TransactionManager({ initialTransactions, categories, activeMont
 
   useEffect(() => {
     if (!hasMore) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        loadMore();
-      }
-    }, { rootMargin: "200px" });
-    
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMore(); },
+      { rootMargin: "200px" }
+    );
     if (loadMoreRef.current) observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
   }, [hasMore, loadMore]);
 
-  const allSelected = transactions.length > 0 && selectedIds.size === transactions.length;
+  // ── Optimistic add / remove ───────────────────────────────────────
+  const addOptimistic = useCallback((data: {
+    tempId: string;
+    type: "income" | "expense";
+    amount: number;
+    category_id: string;
+    description: string;
+    date: string;
+    payment_method?: string | null;
+  }) => {
+    const cat = categories.find((c) => c.id === data.category_id);
+    const newTxn: TxnRow = {
+      id: data.tempId,
+      type: data.type,
+      amount: data.amount,
+      date: data.date,
+      description: data.description,
+      category_id: data.category_id,
+      payment_method: data.payment_method,
+      category_name: cat?.name ?? null,
+      category_color: cat?.color ?? null,
+      category_icon: cat?.icon ?? null,
+    };
+    // Prepend to list and sort by date descending so it lands in the right group
+    setTransactions((prev) => [newTxn, ...prev]);
+    // Auto-switch tab so the new item is immediately visible
+    setTypeTab("all");
+  }, [categories]);
+
+  const removeOptimistic = useCallback((tempId: string) => {
+    setTransactions((prev) => prev.filter((t) => t.id !== tempId));
+  }, []);
+
+  // ── Client-side type filtering (instant, 0 ms) ────────────────────
+  const displayedTransactions = useMemo(
+    () => typeTab === "all" ? transactions : transactions.filter((t) => t.type === typeTab),
+    [transactions, typeTab]
+  );
+
+  // Tab counts (computed from full loaded set, not filtered view)
+  const incomeCount  = useMemo(() => transactions.filter((t) => t.type === "income").length,  [transactions]);
+  const expenseCount = useMemo(() => transactions.filter((t) => t.type === "expense").length, [transactions]);
+
+  // ── Bulk selection ────────────────────────────────────────────────
+  const allSelected  = displayedTransactions.length > 0 && selectedIds.size === displayedTransactions.length;
   const someSelected = selectedIds.size > 0;
 
   function toggleAll() {
     if (allSelected) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(transactions.map((t) => t.id)));
+      setSelectedIds(new Set(displayedTransactions.map((t) => t.id)));
     }
   }
 
@@ -129,22 +182,30 @@ export function TransactionManager({ initialTransactions, categories, activeMont
     });
   }
 
-  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+  function handleTypeTab(tab: "all" | "income" | "expense") {
+    setTypeTab(tab);
+    setSelectedIds(new Set()); // clear selection when switching tabs
+  }
 
-  const filterCats = categories.map((c) => ({ id: c.id, name: c.name }));
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+  const filterCats    = categories.map((c) => ({ id: c.id, name: c.name }));
   const selectedArray = Array.from(selectedIds);
 
-  // Group transactions by date
-  const groupedTransactions: Record<string, TxnRow[]> = {};
-  transactions.forEach((txn) => {
-    const label = getGroupLabel(txn.date);
-    if (!groupedTransactions[label]) groupedTransactions[label] = [];
-    groupedTransactions[label].push(txn);
-  });
+  // ── Group displayed transactions by date ──────────────────────────
+  const groupedTransactions = useMemo(() => {
+    const groups: Record<string, TxnRow[]> = {};
+    displayedTransactions.forEach((txn) => {
+      const label = getGroupLabel(txn.date);
+      if (!groups[label]) groups[label] = [];
+      groups[label].push(txn);
+    });
+    return groups;
+  }, [displayedTransactions]);
 
+  // ── Render ────────────────────────────────────────────────────────
   return (
     <>
-      {/* Bulk actions bar — replaces filter bar when items are selected */}
+      {/* ── Top bar: bulk toolbar OR filters + type tabs ───────────── */}
       {someSelected ? (
         <BulkActionsBar
           selectedIds={selectedArray}
@@ -152,16 +213,74 @@ export function TransactionManager({ initialTransactions, categories, activeMont
           onClear={clearSelection}
         />
       ) : (
-        <div className="mb-4">
-          <TransactionFilters
-            categories={filterCats}
-            showExportMenu
-          />
+        <div className="mb-4 space-y-3">
+          {/* Row 1: Type tabs (instant) + Add Transaction button */}
+          <div className="flex items-center justify-between gap-3">
+            {/* Type tabs — pure local state, zero network request */}
+            <div className="flex h-9 rounded-lg border border-gray-200 bg-white overflow-hidden text-sm font-medium shrink-0">
+              {TYPE_TABS.map(({ value, label }) => {
+                const count = value === "income" ? incomeCount : value === "expense" ? expenseCount : transactions.length;
+                return (
+                  <button
+                    key={value}
+                    onClick={() => handleTypeTab(value)}
+                    className={cn(
+                      "px-3 transition-colors flex items-center gap-1.5",
+                      typeTab === value
+                        ? value === "income"
+                          ? "bg-green-100 text-green-700"
+                          : value === "expense"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-[#1E6B4E]/10 text-[#1E6B4E]"
+                        : "text-gray-500 hover:bg-gray-50"
+                    )}
+                  >
+                    {label}
+                    {value !== "all" && (
+                      <span className={cn(
+                        "text-[10px] font-bold rounded-full px-1.5 py-0.5 tabular-nums leading-none",
+                        typeTab === value
+                          ? value === "income"
+                            ? "bg-green-200/70 text-green-800"
+                            : "bg-red-200/70 text-red-800"
+                          : "bg-gray-100 text-gray-400"
+                      )}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Add Transaction — optimistic, instant UI update */}
+            <TransactionDialog
+              categories={categories}
+              activeMonth={activeMonth}
+              onOptimisticAdd={addOptimistic}
+              onOptimisticRemove={removeOptimistic}
+            />
+          </div>
+
+          {/* Row 2: Search / period / category / export filters */}
+          <TransactionFilters categories={filterCats} showExportMenu />
         </div>
       )}
 
-      {/* Transaction list */}
-      {transactions.length > 0 && (
+      {/* ── Empty state for current tab ────────────────────────────── */}
+      {displayedTransactions.length === 0 && transactions.length > 0 && (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white py-12 text-center px-6">
+          <p className="text-sm font-medium text-gray-700">
+            No {typeTab} transactions in this period
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            Switch to &quot;All&quot; to see all transactions, or add one now.
+          </p>
+        </div>
+      )}
+
+      {/* ── Transaction list ───────────────────────────────────────── */}
+      {displayedTransactions.length > 0 && (
         <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden relative">
           {/* Select-all header */}
           <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-50 bg-gray-50/40 sticky top-0 z-10">
@@ -174,7 +293,7 @@ export function TransactionManager({ initialTransactions, categories, activeMont
             />
             <span className="text-xs text-gray-400 font-medium">
               {someSelected
-                ? `${selectedIds.size} of ${transactions.length} selected`
+                ? `${selectedIds.size} of ${displayedTransactions.length} selected`
                 : "Select all"}
             </span>
           </div>
@@ -182,17 +301,18 @@ export function TransactionManager({ initialTransactions, categories, activeMont
           <div className="divide-y divide-gray-50">
             {Object.entries(groupedTransactions).map(([dateLabel, txns]) => (
               <div key={dateLabel}>
-                {/* Sub-header */}
+                {/* Date group sub-header */}
                 <div className="px-4 py-2 bg-gray-50/80 border-y border-gray-100 first:border-t-0 sticky top-10 z-10 backdrop-blur-sm">
                   <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     {dateLabel}
                   </h3>
                 </div>
-                
+
                 <ul className="divide-y divide-gray-50">
                   {txns.map((txn) => {
-                    const isIncome = txn.type === "income";
+                    const isIncome  = txn.type === "income";
                     const isSelected = selectedIds.has(txn.id);
+                    const isOptimistic = txn.id.startsWith("opt-");
                     const Icon = txn.category_name
                       ? getCategoryIcon({ name: txn.category_name, icon: txn.category_icon ?? undefined })
                       : null;
@@ -200,39 +320,40 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                     return (
                       <li
                         key={txn.id}
-                        className={`flex items-center gap-2.5 px-4 py-3 transition-colors group ${
-                          isSelected
-                            ? "bg-[#1E6B4E]/5"
-                            : "hover:bg-gray-50/60"
-                        }`}
+                        className={cn(
+                          "flex items-center gap-2.5 px-4 py-3 transition-colors group",
+                          isSelected   ? "bg-[#1E6B4E]/5"  : "hover:bg-gray-50/60",
+                          isOptimistic ? "opacity-70"       : ""
+                        )}
                       >
                         {/* Checkbox */}
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => toggleOne(txn.id)}
+                          disabled={isOptimistic}
                           className="h-4 w-4 rounded border-gray-300 accent-[#1E6B4E] cursor-pointer shrink-0"
                           aria-label={`Select ${txn.description || txn.category_name || "transaction"}`}
                         />
 
-                        <div
-                          className={`h-2 w-2 shrink-0 rounded-full ${
-                            isIncome ? "bg-green-500" : "bg-red-500"
-                          }`}
-                        />
+                        <div className={cn(
+                          "h-2 w-2 shrink-0 rounded-full",
+                          isIncome ? "bg-green-500" : "bg-red-500"
+                        )} />
 
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">
                             {txn.description || txn.category_name || "—"}
+                            {isOptimistic && (
+                              <span className="ml-1.5 text-[10px] text-gray-400 font-normal">saving…</span>
+                            )}
                           </p>
                           <div className="flex items-center gap-2 mt-0.5">
                             {txn.category_name && (
                               <span
                                 className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium"
                                 style={{
-                                  backgroundColor: txn.category_color
-                                    ? `${txn.category_color}18`
-                                    : "#f3f4f6",
+                                  backgroundColor: txn.category_color ? `${txn.category_color}18` : "#f3f4f6",
                                   color: txn.category_color ?? "#6b7280",
                                 }}
                               >
@@ -240,32 +361,38 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                                 {txn.category_name}
                               </span>
                             )}
+                            <span className="text-xs text-gray-400">
+                              {new Date(txn.date + "T00:00:00").toLocaleDateString("en-IN", {
+                                day: "numeric", month: "short", year: "numeric",
+                              })}
+                            </span>
                           </div>
                         </div>
 
-                        <span
-                          className={`text-sm font-semibold tabular-nums shrink-0 ${
-                            isIncome ? "text-green-600" : "text-red-600"
-                          }`}
-                        >
-                          {isIncome ? "+" : "-"}
-                          {formatINR(txn.amount)}
+                        <span className={cn(
+                          "text-sm font-semibold tabular-nums shrink-0",
+                          isIncome ? "text-green-600" : "text-red-600"
+                        )}>
+                          {isIncome ? "+" : "-"}{formatINR(txn.amount)}
                         </span>
 
-                        <div className="flex items-center gap-0.5">
-                          <TransactionDialog
-                            categories={categories}
-                            transaction={{
-                              id: txn.id,
-                              type: txn.type,
-                              amount: txn.amount,
-                              category_id: txn.category_id,
-                              description: txn.description,
-                              date: txn.date,
-                            }}
-                          />
-                          <DeleteTransactionButton id={txn.id} />
-                        </div>
+                        {/* Edit / Delete — hidden for optimistic rows */}
+                        {!isOptimistic && (
+                          <div className="flex items-center gap-0.5">
+                            <TransactionDialog
+                              categories={categories}
+                              transaction={{
+                                id: txn.id,
+                                type: txn.type,
+                                amount: txn.amount,
+                                category_id: txn.category_id,
+                                description: txn.description,
+                                date: txn.date,
+                              }}
+                            />
+                            <DeleteTransactionButton id={txn.id} />
+                          </div>
+                        )}
                       </li>
                     );
                   })}
@@ -274,17 +401,17 @@ export function TransactionManager({ initialTransactions, categories, activeMont
             ))}
           </div>
 
-          {/* Skeleton Loader / Observer target */}
+          {/* Infinite scroll sentinel + skeleton */}
           <div ref={loadMoreRef} className="w-full">
             {isFetching && (
               <div className="px-4 py-4 animate-pulse border-t border-gray-50 flex items-center gap-3">
-                <div className="h-4 w-4 bg-gray-200 rounded shrink-0"></div>
-                <div className="h-2 w-2 bg-gray-200 rounded-full shrink-0"></div>
+                <div className="h-4 w-4 bg-gray-200 rounded shrink-0" />
+                <div className="h-2 w-2 bg-gray-200 rounded-full shrink-0" />
                 <div className="flex-1">
-                   <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
-                   <div className="h-3 bg-gray-100 rounded w-1/4"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/3 mb-2" />
+                  <div className="h-3 bg-gray-100 rounded w-1/4" />
                 </div>
-                <div className="h-4 bg-gray-200 rounded w-16 shrink-0"></div>
+                <div className="h-4 bg-gray-200 rounded w-16 shrink-0" />
               </div>
             )}
           </div>
