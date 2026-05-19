@@ -12,6 +12,7 @@ import { TrendChartCard } from "@/components/dashboard/trend-chart-card";
 import { CategoryPieChart, type CategorySlice } from "@/components/dashboard/category-pie-chart";
 import { CategoryLimits } from "@/components/dashboard/category-limits";
 import { DueRecurringCard } from "@/components/dashboard/due-recurring-card";
+import { BudgetWidget } from "@/components/dashboard/budget-widget";
 import { BudgetSetupDialog } from "@/components/dashboard/budget-setup-dialog";
 import { QuickAddForm } from "@/components/dashboard/quick-add-form";
 import { UpcomingBillsCard, type UpcomingBill } from "@/components/dashboard/upcoming-bills-card";
@@ -50,11 +51,13 @@ export default async function DashboardPage() {
   const daysInMonth = new Date(thisYear, thisMonth, 0).getDate();
   const daysRemaining = Math.max(daysInMonth - now.getDate() + 1, 1);
 
-  // Fetch profile, transactions, categories-with-limits, due recurring items, all categories, upcoming bills in parallel
-  const [{ data: profile }, { data: txns }, { data: limitedCats }, { data: dueRecurring }, { data: allCats }, { data: upcomingRecurring }] = await Promise.all([
+  // Fetch profile, transactions, due recurring items, all categories, upcoming bills in parallel
+  // Note: category_limits is stored in profiles (JSONB) — NOT in categories.monthly_limit —
+  // so we no longer need a separate limitedCats query.
+  const [{ data: profile }, { data: txns }, { data: dueRecurring }, { data: allCats }, { data: upcomingRecurring }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("monthly_budget, rollover_enabled")
+      .select("monthly_budget, rollover_enabled, category_limits")
       .eq("id", user!.id)
       .single(),
     supabase
@@ -63,11 +66,6 @@ export default async function DashboardPage() {
       .eq("user_id", user!.id)
       .gte("date", windowStartStr)
       .order("date", { ascending: false }),
-    supabase
-      .from("categories")
-      .select("id, name, color, monthly_limit")
-      .or(`user_id.eq.${user!.id},user_id.is.null`)
-      .not("monthly_limit", "is", null),
     supabase
       .from("recurring_transactions")
       .select("id, type, description, amount, next_due_date, frequency, categories(name)")
@@ -179,14 +177,28 @@ export default async function DashboardPage() {
   }));
 
   // ── Category spending limits ──────────────────────────────────────
-  const categoryLimitItems = (limitedCats ?? [])
-    .filter((c) => c.monthly_limit != null)
-    .map((c) => {
+  // Limits now live in profiles.category_limits (JSONB) for per-user isolation.
+  const categoryLimits =
+    (profile?.category_limits as Record<string, number> | null) ?? {};
+
+  const categoryLimitItems = Object.entries(categoryLimits)
+    .filter(([, limit]) => Number(limit) > 0)
+    .map(([catId, limit]) => {
+      const cat = (allCats ?? []).find((c) => c.id === catId);
+      if (!cat) return null;
       const spent = currentMonthTxns
-        .filter((t) => t.type === "expense" && t.category_id === c.id)
+        .filter((t) => t.type === "expense" && t.category_id === catId)
         .reduce((s, t) => s + Number(t.amount), 0);
-      return { id: c.id, name: c.name, color: c.color, monthly_limit: Number(c.monthly_limit), spent };
+      return {
+        id: catId,
+        name: cat.name,
+        color: cat.color ?? null,
+        icon: cat.icon ?? null,
+        monthly_limit: Number(limit),
+        spent,
+      };
     })
+    .filter((item): item is NonNullable<typeof item> => item !== null)
     .sort((a, b) => b.spent / b.monthly_limit - a.spent / a.monthly_limit);
 
   // ── Recent transactions (last 5) — shaped for AnimatedTransactionList ───────
@@ -312,69 +324,31 @@ export default async function DashboardPage() {
               Set a limit to track how much you&apos;re spending
             </p>
           </div>
-          <BudgetSetupDialog categories={allCats ?? []} rolloverEnabled={!!profile?.rollover_enabled} />
+          <BudgetSetupDialog
+            categories={allCats ?? []}
+            rolloverEnabled={!!profile?.rollover_enabled}
+            categoryLimits={categoryLimits}
+          />
         </div>
       ) : (() => {
         const baseBudget = Number(profile.monthly_budget);
-        // Rollover: unspent from last month carries forward
         const rolloverAmount = profile.rollover_enabled
           ? Math.max(0, baseBudget - prevExpense)
           : 0;
         const budget = baseBudget + rolloverAmount;
-        const pct = Math.min((monthExpense / budget) * 100, 100);
-        const remaining = budget - monthExpense;
-        const over = monthExpense > budget;
-        const barColor = over || pct >= 95
-          ? "bg-red-500"
-          : pct >= 80
-            ? "bg-amber-500"
-            : "bg-[#1E6B4E]";
-        const textColor = over || pct >= 95 ? "text-red-600" : pct >= 80 ? "text-amber-600" : "text-[#1E6B4E]";
-        // Safe-to-spend: remaining budget ÷ days left in month (includes today)
-        const safeToSpend = !over && remaining > 0 ? Math.floor(remaining / daysRemaining) : 0;
 
         return (
-          <div className="rounded-xl border border-gray-100 bg-white px-5 py-4 mb-6">
-            <div className="flex items-center justify-between mb-2.5">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-gray-900">
-                  Monthly budget
-                </span>
-                <BudgetSetupDialog currentBudget={baseBudget} rolloverEnabled={!!profile.rollover_enabled} categories={allCats ?? []} />
-                {rolloverAmount > 0 && (
-                  <span className="text-xs font-medium text-[#1E6B4E] tabular-nums">
-                    +{formatINR(rolloverAmount)} rollover
-                  </span>
-                )}
-                <span className={`text-xs font-medium tabular-nums ${textColor}`}>
-                  {pct.toFixed(0)}% used
-                </span>
-              </div>
-              <span className="text-xs text-gray-500 tabular-nums">
-                {formatINR(monthExpense)}{" "}
-                <span className="text-gray-400">of {formatINR(budget)}</span>
-              </span>
-            </div>
-            <div className="h-2 w-full rounded-full bg-gray-100">
-              <div
-                className={`h-2 rounded-full transition-all ${barColor}`}
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-            {/* Remaining + safe-to-spend pill */}
-            <div className="mt-1.5 flex items-center justify-between gap-3">
-              <p className={`text-xs tabular-nums ${over ? "text-red-600 font-medium" : "text-gray-400"}`}>
-                {over
-                  ? `${formatINR(monthExpense - budget)} over budget`
-                  : `${formatINR(remaining)} remaining`}
-              </p>
-              {safeToSpend > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#1E6B4E]/8 px-2.5 py-0.5 text-xs font-semibold text-[#1E6B4E] tabular-nums shrink-0">
-                  Safe to spend today: {formatINR(safeToSpend)}
-                </span>
-              )}
-            </div>
-          </div>
+          <BudgetWidget
+            monthExpense={monthExpense}
+            budget={budget}
+            baseBudget={baseBudget}
+            rolloverAmount={rolloverAmount}
+            daysRemaining={daysRemaining}
+            categoryLimitItems={categoryLimitItems}
+            categoryLimits={categoryLimits}
+            categories={allCats ?? []}
+            rolloverEnabled={!!profile.rollover_enabled}
+          />
         );
       })()}
 

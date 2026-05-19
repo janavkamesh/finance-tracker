@@ -34,6 +34,13 @@ export async function updateBudget(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+/**
+ * Persists per-category spending limits into profiles.category_limits (JSONB).
+ *
+ * Storing limits here (not on the categories row) avoids the RLS restriction
+ * that prevents users from updating system categories (user_id IS NULL).
+ * Each user owns their profile row, so the update is always permitted.
+ */
 export async function saveCategoryLimits(
   updates: { categoryId: string; limit: number | null }[]
 ): Promise<{ error?: string }> {
@@ -45,12 +52,58 @@ export async function saveCategoryLimits(
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  // Fetch the current JSONB limits so we can merge (not overwrite)
+  const { data: profile, error: fetchError } = await supabase
+    .from("profiles")
+    .select("category_limits")
+    .eq("id", user.id)
+    .single();
+
+  if (fetchError) return { error: fetchError.message };
+
+  const current: Record<string, number> =
+    (profile?.category_limits as Record<string, number>) ?? {};
+
+  const merged = { ...current };
   for (const { categoryId, limit } of updates) {
-    await supabase
-      .from("categories")
-      .update({ monthly_limit: limit })
-      .eq("id", categoryId);
+    if (limit === null || limit === 0) {
+      delete merged[categoryId];
+    } else {
+      merged[categoryId] = limit;
+    }
   }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ category_limits: merged, updated_at: new Date().toISOString() })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard");
+  revalidatePath("/settings");
+  return {};
+}
+
+/** Wipes all per-category limits for the current user. */
+export async function resetBudget(): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      monthly_budget: null,
+      rollover_enabled: false,
+      category_limits: {},
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message };
 
   revalidatePath("/dashboard");
   revalidatePath("/settings");

@@ -1751,3 +1751,41 @@ Replaced `<select>` for category in the transaction dialog and recurring dialog 
 **Root cause:** The nested `Dialog` approach used Base UI's `Dialog.Popup` with `fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2` positioning relative to the viewport *and* the `p-4 gap-4` defaults from `DialogContent` (even when overridden with `p-0 gap-0`, the dialog's own frame and the white/blurred `overlayClassName` created a visual discontinuity layer around the panel, appearing as a gap).
 
 **Fix:** The new portal panel uses a single wrapper div (`fixed inset-0 z-[60] flex items-center justify-center`) with the inner panel (`relative w-full max-w-sm rounded-xl bg-white border border-gray-200 shadow-2xl overflow-hidden`) positioned precisely via flexbox centering. No extra offsets, no intermediate wrapper padding — the panel sits flush with its own border-radius at the exact visual center. All inner section padding (`px-4 pt-4 pb-3`, etc.) is preserved from the original design.
+
+---
+
+## Phase 50 — Budget System Overhaul (Bug Fix + Reset + Breakdown Popover)
+
+### Bug Fix: Category Budget Persistence
+
+**Root cause (confirmed via RLS audit):** The `categories` table UPDATE policy is `auth.uid() = user_id`. System categories have `user_id = NULL`, so the condition evaluates to `false` — Supabase silently returns 0 rows updated, no error surfaced. Every per-category limit set by the user was silently discarded on save.
+
+**Fix — `profiles.category_limits` JSONB:**
+- Applied migration: `ALTER TABLE profiles ADD COLUMN category_limits jsonb NOT NULL DEFAULT '{}'`
+- `actions/budget.ts` — `saveCategoryLimits` now reads the current JSONB from `profiles`, merges the incoming diff (set or delete per key), and upserts back. Users always own their profile row → zero RLS friction.
+- `app/(dashboard)/dashboard/page.tsx` — Removed the `limitedCats` parallel query (`categories WHERE monthly_limit IS NOT NULL`). Replaced with reading `profile.category_limits` from the already-fetched profile row. Saves one DB round-trip.
+- `components/dashboard/budget-setup-dialog.tsx` — Added `categoryLimits?: Record<string, number>` prop. `handleOpen` pre-populates rows from this prop (not from `category.monthly_limit`). `handleSave` diffs against `categoryLimits` keys to compute which IDs were removed.
+
+---
+
+### Feature: Reset Budget ("Clear budget" button)
+
+**UX decision:** Placed the "Clear budget" button in the **bottom-left** of the modal footer (opposite the "Save budget" CTA) using `text-red-400 hover:text-red-600` — muted destructive styling that signals danger without visual aggression. Only shown when a budget already exists (edit mode), so the "Set up" flow stays clean.
+
+**`actions/budget.ts`** — New `resetBudget()` server action: sets `monthly_budget = null`, `rollover_enabled = false`, `category_limits = {}` in a single atomic update on `profiles`.
+
+**`budget-setup-dialog.tsx`** — `handleReset` calls `resetBudget()`, shows a success toast, and closes the dialog. Disabled while loading to prevent double-fire.
+
+---
+
+### Feature: Category Breakdown Popover
+
+**UX decision:** Placed a compact "Breakdown ↓" pill button at the far right of the budget card footer, adjacent to the "Safe to spend" pill. Opens a floating card anchored below (`top-full mt-2`), `z-30`, click-outside + Escape to dismiss (Escape uses capture phase to avoid closing the parent dialog).
+
+**`components/dashboard/budget-widget.tsx`** (new client component):
+- Extracts the budget card from the dashboard server component IIFE into a proper client component
+- `BudgetWidget` owns `breakdownOpen` toggle state
+- `BreakdownPopover` renders per-category rows with: icon (via `getCategoryIcon`), name, color-coded progress bar, `spent / limit`, percentage used, and remaining amount
+- Color coding: green `#1E6B4E` → amber → red (≥80% → ≥100%)
+- Popover is only rendered when `categoryLimitItems.length > 0` (zero clutters the UI)
+- `CategoryLimits` component below the budget widget is preserved — the popover is additive, not a replacement

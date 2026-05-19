@@ -9,7 +9,7 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { CustomSelect } from "@/components/ui/custom-select";
-import { updateBudget, saveCategoryLimits } from "@/actions/budget";
+import { updateBudget, saveCategoryLimits, resetBudget } from "@/actions/budget";
 
 interface Category {
   id: string;
@@ -23,6 +23,11 @@ interface Props {
   currentBudget?: number | null;
   rolloverEnabled?: boolean;
   categories?: Category[];
+  /**
+   * Per-user category limits from profiles.category_limits (JSONB).
+   * Keyed by category ID, value is the monthly limit in INR.
+   */
+  categoryLimits?: Record<string, number>;
 }
 
 interface CatBudgetRow {
@@ -83,7 +88,12 @@ function newRowId() {
   return Math.random().toString(36).slice(2);
 }
 
-export function BudgetSetupDialog({ currentBudget, rolloverEnabled = false, categories = [] }: Props) {
+export function BudgetSetupDialog({
+  currentBudget,
+  rolloverEnabled = false,
+  categories = [],
+  categoryLimits = {},
+}: Props) {
   const [open, setOpen] = useState(false);
   const [income, setIncome] = useState("");
   const [budget, setBudget] = useState(
@@ -96,7 +106,10 @@ export function BudgetSetupDialog({ currentBudget, rolloverEnabled = false, cate
 
   const incomeNum = parseAmount(income);
   const budgetNum = parseAmount(budget);
-  const savingsAmt = incomeNum > 0 && budgetNum > 0 ? Math.max(0, incomeNum - budgetNum) : null;
+  const savingsAmt =
+    incomeNum > 0 && budgetNum > 0
+      ? Math.max(0, incomeNum - budgetNum)
+      : null;
   const savingsRate =
     incomeNum > 0 && budgetNum > 0
       ? Math.max(0, ((incomeNum - budgetNum) / incomeNum) * 100)
@@ -119,14 +132,21 @@ export function BudgetSetupDialog({ currentBudget, rolloverEnabled = false, cate
   }
 
   function addCatRow() {
-    setCatBudgets((prev) => [...prev, { rowId: newRowId(), categoryId: "", amount: "" }]);
+    setCatBudgets((prev) => [
+      ...prev,
+      { rowId: newRowId(), categoryId: "", amount: "" },
+    ]);
   }
 
   function removeCatRow(rowId: string) {
     setCatBudgets((prev) => prev.filter((r) => r.rowId !== rowId));
   }
 
-  function updateCatRow(rowId: string, field: "categoryId" | "amount", value: string) {
+  function updateCatRow(
+    rowId: string,
+    field: "categoryId" | "amount",
+    value: string
+  ) {
     setCatBudgets((prev) =>
       prev.map((r) => (r.rowId === rowId ? { ...r, [field]: value } : r))
     );
@@ -155,13 +175,14 @@ export function BudgetSetupDialog({ currentBudget, rolloverEnabled = false, cate
     setSelectedStyle(null);
     setRollover(rolloverEnabled);
     setOpen(true);
-    // Pre-populate category rows from existing limits
-    const existing = categories
-      .filter((c) => c.monthly_limit != null && Number(c.monthly_limit) > 0)
-      .map((c) => ({
+
+    // Pre-populate rows from profiles.category_limits (the source of truth)
+    const existing = Object.entries(categoryLimits)
+      .filter(([, limit]) => limit > 0)
+      .map(([catId, limit]) => ({
         rowId: newRowId(),
-        categoryId: c.id,
-        amount: String(c.monthly_limit),
+        categoryId: catId,
+        amount: String(limit),
       }));
     setCatBudgets(existing);
   }
@@ -173,7 +194,7 @@ export function BudgetSetupDialog({ currentBudget, rolloverEnabled = false, cate
     }
     setLoading(true);
 
-    // Save monthly budget + rollover setting
+    // 1. Save monthly budget + rollover
     const fd = new FormData();
     fd.set("monthly_budget", String(budgetNum));
     fd.set("rollover_enabled", String(rollover));
@@ -185,18 +206,19 @@ export function BudgetSetupDialog({ currentBudget, rolloverEnabled = false, cate
       return;
     }
 
-    // Save category limits
+    // 2. Compute the diff: which categories were added/changed/removed
     const validRows = catBudgets.filter(
       (r) => r.categoryId && Number(r.amount) > 0
     );
-    const existingLimitIds = categories
-      .filter((c) => c.monthly_limit != null && Number(c.monthly_limit) > 0)
-      .map((c) => c.id);
+    const existingIds = Object.keys(categoryLimits);
     const updatedIds = validRows.map((r) => r.categoryId);
-    const removedIds = existingLimitIds.filter((id) => !updatedIds.includes(id));
+    const removedIds = existingIds.filter((id) => !updatedIds.includes(id));
 
     const allUpdates: { categoryId: string; limit: number | null }[] = [
-      ...validRows.map((r) => ({ categoryId: r.categoryId, limit: Number(r.amount) })),
+      ...validRows.map((r) => ({
+        categoryId: r.categoryId,
+        limit: Number(r.amount),
+      })),
       ...removedIds.map((id) => ({ categoryId: id, limit: null })),
     ];
 
@@ -212,6 +234,18 @@ export function BudgetSetupDialog({ currentBudget, rolloverEnabled = false, cate
     toast.success("Budget saved!");
     setLoading(false);
     setOpen(false);
+  }
+
+  async function handleReset() {
+    setLoading(true);
+    const result = await resetBudget();
+    if (result?.error) {
+      toast.error(result.error);
+    } else {
+      toast.success("Budget cleared");
+      setOpen(false);
+    }
+    setLoading(false);
   }
 
   const inputClass =
@@ -240,17 +274,23 @@ export function BudgetSetupDialog({ currentBudget, rolloverEnabled = false, cate
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
+        <DialogContent
+          className="sm:max-w-md p-0 gap-0 overflow-hidden"
+          onClose={() => setOpen(false)}
+        >
           {/* Branded header */}
           <div className="bg-[#1E6B4E] px-6 py-5">
             <div className="flex items-center gap-2.5 mb-1">
               <PiggyBank className="size-5 text-white/80" />
               <h2 className="text-base font-bold text-white">
-                {currentBudget ? "Edit monthly budget" : "Set up your monthly budget"}
+                {currentBudget
+                  ? "Edit monthly budget"
+                  : "Set up your monthly budget"}
               </h2>
             </div>
             <p className="text-xs text-white/65 leading-relaxed">
-              A budget gives your spending a limit — helping you save more and stress less every month.
+              A budget gives your spending a limit — helping you save more and
+              stress less every month.
             </p>
           </div>
 
@@ -259,15 +299,22 @@ export function BudgetSetupDialog({ currentBudget, rolloverEnabled = false, cate
             {/* Step 1: Income */}
             <div>
               <div className="flex items-center gap-2 mb-1.5">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#1E6B4E]/10 text-[10px] font-bold text-[#1E6B4E]">1</span>
-                <label className="text-sm font-semibold text-gray-800">Monthly take-home income</label>
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#1E6B4E]/10 text-[10px] font-bold text-[#1E6B4E]">
+                  1
+                </span>
+                <label className="text-sm font-semibold text-gray-800">
+                  Monthly take-home income
+                </label>
                 <span className="text-xs text-gray-400">(optional)</span>
               </div>
               <p className="text-xs text-gray-400 mb-2 pl-7">
-                Used only to calculate smart presets and savings rate — not stored.
+                Used only to calculate smart presets and savings rate — not
+                stored.
               </p>
               <div className="relative pl-7">
-                <span className="absolute left-[2.2rem] top-1/2 -translate-y-1/2 text-sm font-medium text-gray-400 pointer-events-none">₹</span>
+                <span className="absolute left-[2.2rem] top-1/2 -translate-y-1/2 text-sm font-medium text-gray-400 pointer-events-none">
+                  ₹
+                </span>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -283,8 +330,12 @@ export function BudgetSetupDialog({ currentBudget, rolloverEnabled = false, cate
             {incomeNum > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#1E6B4E]/10 text-[10px] font-bold text-[#1E6B4E]">2</span>
-                  <p className="text-sm font-semibold text-gray-800">Choose a spending style</p>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#1E6B4E]/10 text-[10px] font-bold text-[#1E6B4E]">
+                    2
+                  </span>
+                  <p className="text-sm font-semibold text-gray-800">
+                    Choose a spending style
+                  </p>
                 </div>
                 <div className="grid grid-cols-3 gap-2 pl-7">
                   {STYLES.map((s, i) => (
@@ -300,14 +351,25 @@ export function BudgetSetupDialog({ currentBudget, rolloverEnabled = false, cate
                       )}
                     >
                       <span className="text-lg leading-none">{s.emoji}</span>
-                      <p className={cn(
-                        "text-xs font-bold mt-1.5",
-                        selectedStyle === i ? s.activeText : "text-gray-700"
-                      )}>
+                      <p
+                        className={cn(
+                          "text-xs font-bold mt-1.5",
+                          selectedStyle === i
+                            ? s.activeText
+                            : "text-gray-700"
+                        )}
+                      >
                         {s.label}
                       </p>
-                      <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{s.desc}</p>
-                      <div className={cn("mt-2 rounded-md px-1.5 py-0.5 text-[10px] font-semibold inline-block", s.chip)}>
+                      <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">
+                        {s.desc}
+                      </p>
+                      <div
+                        className={cn(
+                          "mt-2 rounded-md px-1.5 py-0.5 text-[10px] font-semibold inline-block",
+                          s.chip
+                        )}
+                      >
                         ₹{formatDisplay(Math.round(incomeNum * s.pct))}
                       </div>
                     </button>
@@ -323,11 +385,14 @@ export function BudgetSetupDialog({ currentBudget, rolloverEnabled = false, cate
                   {incomeNum > 0 ? "3" : "2"}
                 </span>
                 <label className="text-sm font-semibold text-gray-800">
-                  Monthly spending limit <span className="text-red-400">*</span>
+                  Monthly spending limit{" "}
+                  <span className="text-red-400">*</span>
                 </label>
               </div>
               <div className="relative pl-7">
-                <span className="absolute left-[2.2rem] top-1/2 -translate-y-1/2 text-lg font-bold text-gray-400 pointer-events-none">₹</span>
+                <span className="absolute left-[2.2rem] top-1/2 -translate-y-1/2 text-lg font-bold text-gray-400 pointer-events-none">
+                  ₹
+                </span>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -352,36 +417,58 @@ export function BudgetSetupDialog({ currentBudget, rolloverEnabled = false, cate
                 className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-[#1E6B4E] cursor-pointer"
               />
               <div>
-                <label htmlFor="rollover_enabled" className="text-sm font-semibold text-gray-800 cursor-pointer">
+                <label
+                  htmlFor="rollover_enabled"
+                  className="text-sm font-semibold text-gray-800 cursor-pointer"
+                >
                   Enable Rollover Budget
                 </label>
                 <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
-                  Unspent budget from the previous month carries forward and adds to this month&apos;s limit.
+                  Unspent budget from the previous month carries forward and
+                  adds to this month&apos;s limit.
                 </p>
               </div>
             </div>
 
             {/* Savings preview */}
             {savingsRate !== null && budgetNum > 0 && (
-              <div className={cn(
-                "rounded-xl px-4 py-4 border",
-                savingsRate >= 20
-                  ? "bg-green-50 border-green-100"
-                  : savingsRate >= 10
-                    ? "bg-amber-50 border-amber-100"
-                    : "bg-red-50 border-red-100"
-              )}>
+              <div
+                className={cn(
+                  "rounded-xl px-4 py-4 border",
+                  savingsRate >= 20
+                    ? "bg-green-50 border-green-100"
+                    : savingsRate >= 10
+                      ? "bg-amber-50 border-amber-100"
+                      : "bg-red-50 border-red-100"
+                )}
+              >
                 <div className="flex items-center justify-between mb-2">
-                  <p className={cn(
-                    "text-xs font-bold uppercase tracking-wide",
-                    savingsRate >= 20 ? "text-green-600" : savingsRate >= 10 ? "text-amber-600" : "text-red-600"
-                  )}>
-                    {savingsRate >= 20 ? "✓ Great savings rate" : savingsRate >= 10 ? "⚠ Moderate savings" : "✗ Low savings rate"}
+                  <p
+                    className={cn(
+                      "text-xs font-bold uppercase tracking-wide",
+                      savingsRate >= 20
+                        ? "text-green-600"
+                        : savingsRate >= 10
+                          ? "text-amber-600"
+                          : "text-red-600"
+                    )}
+                  >
+                    {savingsRate >= 20
+                      ? "✓ Great savings rate"
+                      : savingsRate >= 10
+                        ? "⚠ Moderate savings"
+                        : "✗ Low savings rate"}
                   </p>
-                  <span className={cn(
-                    "text-sm font-bold tabular-nums",
-                    savingsRate >= 20 ? "text-green-700" : savingsRate >= 10 ? "text-amber-700" : "text-red-700"
-                  )}>
+                  <span
+                    className={cn(
+                      "text-sm font-bold tabular-nums",
+                      savingsRate >= 20
+                        ? "text-green-700"
+                        : savingsRate >= 10
+                          ? "text-amber-700"
+                          : "text-red-700"
+                    )}
+                  >
                     {savingsRate.toFixed(0)}%
                   </span>
                 </div>
@@ -389,7 +476,11 @@ export function BudgetSetupDialog({ currentBudget, rolloverEnabled = false, cate
                   <div
                     className={cn(
                       "h-1.5 rounded-full transition-all",
-                      savingsRate >= 20 ? "bg-green-500" : savingsRate >= 10 ? "bg-amber-500" : "bg-red-500"
+                      savingsRate >= 20
+                        ? "bg-green-500"
+                        : savingsRate >= 10
+                          ? "bg-amber-500"
+                          : "bg-red-500"
                     )}
                     style={{ width: `${Math.min(savingsRate, 100)}%` }}
                   />
@@ -400,9 +491,13 @@ export function BudgetSetupDialog({ currentBudget, rolloverEnabled = false, cate
                     ₹{savingsAmt!.toLocaleString("en-IN")}
                   </span>{" "}
                   per month.{" "}
-                  {savingsRate < 10 && "Try reducing your budget to save more."}
-                  {savingsRate >= 10 && savingsRate < 20 && "Aim for 20%+ to build wealth faster."}
-                  {savingsRate >= 20 && "You're on track to build long-term wealth!"}
+                  {savingsRate < 10 &&
+                    "Try reducing your budget to save more."}
+                  {savingsRate >= 10 &&
+                    savingsRate < 20 &&
+                    "Aim for 20%+ to build wealth faster."}
+                  {savingsRate >= 20 &&
+                    "You're on track to build long-term wealth!"}
                 </p>
               </div>
             )}
@@ -410,9 +505,13 @@ export function BudgetSetupDialog({ currentBudget, rolloverEnabled = false, cate
             {/* 50/30/20 rule tip */}
             {!incomeNum && (
               <div className="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3.5">
-                <p className="text-xs font-semibold text-gray-600 mb-1">💡 The 50/30/20 Rule</p>
+                <p className="text-xs font-semibold text-gray-600 mb-1">
+                  💡 The 50/30/20 Rule
+                </p>
                 <p className="text-xs text-gray-500 leading-relaxed">
-                  A popular guideline: spend <strong>50%</strong> on needs, <strong>30%</strong> on wants, and save <strong>20%</strong>. Enter your income above to get personalised suggestions.
+                  A popular guideline: spend <strong>50%</strong> on needs,{" "}
+                  <strong>30%</strong> on wants, and save <strong>20%</strong>.
+                  Enter your income above to get personalised suggestions.
                 </p>
               </div>
             )}
@@ -424,37 +523,53 @@ export function BudgetSetupDialog({ currentBudget, rolloverEnabled = false, cate
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#1E6B4E]/10 text-[10px] font-bold text-[#1E6B4E]">
                     {stepNum(4)}
                   </span>
-                  <p className="text-sm font-semibold text-gray-800">Budget by category</p>
+                  <p className="text-sm font-semibold text-gray-800">
+                    Budget by category
+                  </p>
                   <span className="text-xs text-gray-400">(optional)</span>
                 </div>
                 <p className="text-xs text-gray-400 mb-3 pl-7">
-                  Set per-category limits to pinpoint exactly where you overspend.
+                  Set per-category limits to pinpoint exactly where you
+                  overspend.
                 </p>
 
                 {catBudgets.length > 0 && (
                   <div className="space-y-2 pl-7 mb-3">
                     {catBudgets.map((row) => {
                       const opts = getCategoryOptions(row.rowId);
-                      const selectedCat = categories.find((c) => c.id === row.categoryId);
+                      const selectedCat = categories.find(
+                        (c) => c.id === row.categoryId
+                      );
                       return (
                         <div key={row.rowId} className="flex items-center gap-2">
                           {/* Category selector */}
                           <div className="flex-1 min-w-0">
                             <CustomSelect
                               options={
-                                selectedCat && !opts.find((o) => o.value === row.categoryId)
-                                  ? [{ label: selectedCat.name, value: selectedCat.id }, ...opts]
+                                selectedCat &&
+                                !opts.find((o) => o.value === row.categoryId)
+                                  ? [
+                                      {
+                                        label: selectedCat.name,
+                                        value: selectedCat.id,
+                                      },
+                                      ...opts,
+                                    ]
                                   : opts
                               }
                               value={row.categoryId}
-                              onChange={(v) => updateCatRow(row.rowId, "categoryId", v)}
+                              onChange={(v) =>
+                                updateCatRow(row.rowId, "categoryId", v)
+                              }
                               placeholder="Select category"
                               className="w-full"
                             />
                           </div>
                           {/* Amount input */}
                           <div className="relative w-28 shrink-0">
-                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">₹</span>
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">
+                              ₹
+                            </span>
                             <input
                               type="text"
                               inputMode="numeric"
@@ -501,23 +616,48 @@ export function BudgetSetupDialog({ currentBudget, rolloverEnabled = false, cate
             )}
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50">
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="rounded-lg border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-white"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={loading || !budgetNum}
-              className="rounded-lg bg-[#1E6B4E] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#185c43] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? "Saving…" : "Save budget"}
-            </button>
+          {/* ── Actions footer ── */}
+          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+            {/* Left: Reset (only shown when a budget already exists) */}
+            {currentBudget ? (
+              <button
+                type="button"
+                onClick={handleReset}
+                disabled={loading}
+                className="text-sm font-medium text-red-400 hover:text-red-600 transition-colors disabled:opacity-50"
+              >
+                Clear budget
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="rounded-lg border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-white"
+              >
+                Cancel
+              </button>
+            )}
+
+            {/* Right: Cancel (edit mode) + Save */}
+            <div className="flex items-center gap-2">
+              {currentBudget && (
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-white"
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={loading || !budgetNum}
+                className="rounded-lg bg-[#1E6B4E] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#185c43] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Saving…" : "Save budget"}
+              </button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
