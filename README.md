@@ -2147,3 +2147,16 @@ Improved clarity and accessibility of the Quick Add transaction strip inputs.
 - **Payment Method label**: Same premium label treatment applied above the payment method dropdown, reading "Payment Method". Solves the context-loss problem where the selected value (e.g. "UPI") gives no hint of what the field represents.
 - **Description placeholder**: Changed the free-text input placeholder from "Note (optional)" to "Description (optional)" — language consistent with financial ledger conventions and the rest of the app.
 - Each labelled dropdown is wrapped in a `flex flex-col gap-0.5` container so the label sits flush above its control without disturbing the row's horizontal flex layout on desktop or the stacked layout on mobile.
+
+---
+
+## Phase 74 — Dashboard Charts: Segmented Control & Month Dropdown Header Controls
+
+### Feature
+Standardised the header controls on the two main dashboard charts, replacing confusing arrow-based pagination with industry-standard toggle patterns.
+
+### UX Design & Changes
+- **Weekly trend card — Segmented Control**: Removed the `<` / `>` ChevronLeft/Right arrow buttons and the dot-indicator row. Replaced with a pill-shaped segmented control (`bg-gray-100` container, `h-7`, `rounded-full`) in the top-right of the card header. Active segment slides a white pill with `shadow-sm` over the inactive option. The card title remains left-aligned and updates dynamically ("Weekly trend" / "Monthly trend") to reflect the active segment.
+- **Expenses by category card — Month Dropdown**: `CategoryPieChart` now owns its own card chrome (`rounded-2xl border border-gray-100 bg-white p-5`) and renders the full card header internally. The title "Expenses by category" is left-aligned. A minimal month dropdown button (`h-7 rounded-full border border-gray-200`, same height as the segmented control) sits top-right, displaying the selected month name (e.g. "May 2026") and a `ChevronDown` caret. Clicking opens a 6-month dropdown list; the active month is highlighted in brand green. Outside-click closes the menu.
+- **Visual balance**: Both controls share `h-7` height, `rounded-full` shape, `text-xs font-semibold` typography, and `border-gray-200` borders — they read as a matched pair across the two adjacent cards.
+- **Dashboard page simplification**: Removed the now-redundant wrapper `<div>` and `<h2>` for the category card from `app/(dashboard)/dashboard/page.tsx`. The component is fully self-contained.

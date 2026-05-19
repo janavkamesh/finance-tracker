@@ -365,15 +365,7 @@ export default async function DashboardPage() {
 
         {/* Right column — Category donut stacked above Upcoming Bills */}
         <div className="flex flex-col gap-4">
-          <div className="rounded-2xl border border-gray-100 bg-white p-5">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">
-              Expenses by category
-              <span className="ml-1.5 text-xs font-normal text-gray-400">
-                ({currentMonthLabel})
-              </span>
-            </h2>
-            <CategoryPieChart data={categoryData} />
-          </div>
+          <CategoryPieChart data={categoryData} />
 
           {/* Upcoming bills — only rendered when there are items */}
           <UpcomingBillsCard items={upcomingItems} />
