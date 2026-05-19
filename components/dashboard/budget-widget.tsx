@@ -189,13 +189,14 @@ export function BudgetWidget({
         ? "text-amber-600"
         : "text-[#1E6B4E]";
 
-  const safeToSpend =
-    !over && remaining > 0 ? Math.floor(remaining / daysRemaining) : 0;
+  // daysRemaining is intentionally accepted via props for future use; the
+  // dashboard glance-view shows only "remaining" to reduce text clutter.
+  void daysRemaining;
 
   const hasBreakdown = categoryLimitItems.length > 0;
 
   return (
-    <div className="rounded-xl border border-gray-100 bg-white px-5 py-4 mb-6">
+    <div className="rounded-xl border border-gray-100 bg-white px-5 py-4 mb-4">
       {/* ── Two-column split: data (left) | action button (right) ── */}
       <div className="flex items-stretch gap-5">
         {/* ─── LEFT: title row, progress bar, secondary meta row ─── */}
@@ -231,36 +232,18 @@ export function BudgetWidget({
             />
           </div>
 
-          {/* Secondary meta row — muted, sits under the bar */}
-          <div className="mt-2 flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2 text-xs text-gray-500 tabular-nums">
-              <span>
-                {formatINR(monthExpense)}{" "}
-                <span className="text-gray-400">of {formatINR(displayBudget)}</span>
-              </span>
-              <span className="text-gray-300">·</span>
-              <span
-                className={cn(
-                  "tabular-nums",
-                  over ? "text-red-500 font-medium" : "text-gray-500"
-                )}
-              >
-                {over
-                  ? `${formatINR(monthExpense - displayBudget)} over`
-                  : `${formatINR(remaining)} remaining`}
-              </span>
-              {safeToSpend > 0 && (
-                <>
-                  <span className="text-gray-300">·</span>
-                  <span className="text-gray-500">
-                    Safe to spend today:{" "}
-                    <span className="font-medium text-[#1E6B4E] tabular-nums">
-                      {formatINR(safeToSpend)}
-                    </span>
-                  </span>
-                </>
+          {/* Secondary meta row — single, focused glance-value beneath the bar */}
+          <div className="mt-2">
+            <span
+              className={cn(
+                "text-xs tabular-nums",
+                over ? "text-red-500 font-medium" : "text-gray-500"
               )}
-            </div>
+            >
+              {over
+                ? `${formatINR(monthExpense - displayBudget)} over budget`
+                : `${formatINR(remaining)} remaining`}
+            </span>
           </div>
         </div>
 

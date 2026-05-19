@@ -218,15 +218,24 @@ export default async function DashboardPage() {
     };
   });
 
-  function delta(current: number, prev: number, lowerIsBetter = false) {
+  // Short, neutral month-over-month delta. Returns a compact INR amount
+  // (e.g. "₹10.2K") with no "vs last month" suffix and no green/red intent —
+  // these are background context, not a primary signal.
+  function compactINR(value: number) {
+    const abs = Math.abs(value);
+    if (abs >= 10_000_000) return `₹${(value / 10_000_000).toFixed(1)}Cr`;
+    if (abs >= 100_000)    return `₹${(value / 100_000).toFixed(1)}L`;
+    if (abs >= 1_000)      return `₹${(value / 1_000).toFixed(1)}K`;
+    return formatINR(value);
+  }
+
+  function delta(current: number, prev: number) {
     if (prev === 0) return null;
     const diff = current - prev;
     if (diff === 0) return null;
-    const positive = lowerIsBetter ? diff < 0 : diff > 0;
     return {
-      label: (diff > 0 ? "+" : "") + formatINR(Math.abs(diff)) + " vs last month",
+      label: compactINR(Math.abs(diff)),
       up: diff > 0,
-      green: positive,
     };
   }
 
@@ -243,7 +252,7 @@ export default async function DashboardPage() {
       value: formatINR(monthExpense),
       color: "text-red-600",
       dot: "bg-red-500",
-      delta: delta(monthExpense, prevExpense, true),
+      delta: delta(monthExpense, prevExpense),
     },
     {
       label: "Net savings",
@@ -257,10 +266,9 @@ export default async function DashboardPage() {
       value: String(monthTxnCount),
       color: "text-gray-900",
       dot: "bg-[#1E6B4E]",
-      delta: prevTxnCount > 0 ? {
-        label: `${monthTxnCount > prevTxnCount ? "+" : ""}${monthTxnCount - prevTxnCount} vs last month`,
+      delta: prevTxnCount > 0 && monthTxnCount !== prevTxnCount ? {
+        label: String(Math.abs(monthTxnCount - prevTxnCount)),
         up: monthTxnCount > prevTxnCount,
-        green: null,
       } : null,
     },
   ];
@@ -269,22 +277,21 @@ export default async function DashboardPage() {
 
   return (
     <>
-      {/* Sticky action bar */}
-      <div className="sticky top-14 md:top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-gray-100 px-6 md:px-8 py-3.5">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <DynamicGreeting firstName={firstName} />
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <RecurringDialog categories={allCats ?? []} triggerVariant="secondary" />
-            <TransactionDialog categories={allCats ?? []} />
-          </div>
+      {/* Sticky action bar — h-16 matches the sidebar's logo section so the
+          bottom borders line up flush across the sidebar/main seam. */}
+      <div className="sticky top-14 md:top-0 z-10 bg-white border-b border-gray-100 h-16 px-6 md:px-8 flex items-center justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <DynamicGreeting firstName={firstName} />
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <RecurringDialog categories={allCats ?? []} triggerVariant="secondary" />
+          <TransactionDialog categories={allCats ?? []} />
         </div>
       </div>
 
-    <main className="px-6 md:px-8 pb-8 pt-6">
+    <main className="px-6 md:px-8 pb-8 pt-4">
       {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 mb-6">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 mb-4">
         {summaryCards.map((card) => (
           <div
             key={card.label}
@@ -298,13 +305,7 @@ export default async function DashboardPage() {
               {card.value}
             </p>
             {card.delta && (
-              <p className={`mt-1 text-xs tabular-nums truncate ${
-                card.delta.green === null
-                  ? "text-gray-400"
-                  : card.delta.green
-                    ? "text-green-600"
-                    : "text-red-500"
-              }`}>
+              <p className="mt-1 text-xs font-medium tabular-nums truncate text-gray-400">
                 {card.delta.up ? "↑" : "↓"} {card.delta.label}
               </p>
             )}
@@ -317,7 +318,7 @@ export default async function DashboardPage() {
 
       {/* Budget progress — always visible */}
       {!profile?.monthly_budget ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-white px-5 py-4 mb-6 flex items-center justify-between">
+        <div className="rounded-xl border border-dashed border-gray-200 bg-white px-5 py-4 mb-4 flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-gray-900">Monthly budget</p>
             <p className="text-xs text-gray-400 mt-0.5">
@@ -356,7 +357,7 @@ export default async function DashboardPage() {
       <DueRecurringCard items={dueItems} />
 
       {/* Charts row */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 mb-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 mb-4">
         {/* Weekly / Monthly trend toggle — 2/3 width on large screens */}
         <div className="lg:col-span-2">
           <TrendChartCard data={monthlyData} />

@@ -2011,3 +2011,41 @@ Eliminated the disruptive route-level skeleton flash that fired on every Month /
 - **Non-Blocking Sync Indicator**: Added a subtle "Syncing…" pill with a small spinning ring next to the filters while `isPending`, plus a faint `opacity-90` cue on the filter row — the user gets feedback that data is refreshing without losing their place in the list.
 - **Tab Counts Track Live Filters**: Income / Expense tab badges now derive from the client-filtered set, so the counts stay coherent with whatever category / period the user just selected — no stale numbers while the server is mid-flight.
 - **Scroll Position Preserved**: `router.replace(..., { scroll: false })` keeps the user pinned to their current viewport on every filter change.
+
+---
+
+## Phase 64 — Above-the-Fold Dashboard Refinement
+
+### Feature
+Refined the top half of the main dashboard (`app/(dashboard)/dashboard/page.tsx`, `components/dashboard/budget-widget.tsx`, `components/dashboard/quick-add-form.tsx`) to reduce text clutter, neutralise competing colors, and lift the Weekly Trend charts into the first-screen viewport.
+
+### UX Design & Changes
+- **Neutral, Compact Trend Deltas**: The Income / Expenses / Net savings / Transactions summary cards no longer shout. The "vs last month" phrasing has been removed entirely; deltas now render as a single compact token like `↑ ₹10.2K` or `↓ ₹1.5L` via a new `compactINR()` helper (K / L / Cr scaling). All trend text and arrows are unified to `text-gray-400 font-medium` — green/red intent is reserved for the primary balance numbers above.
+- **Glance-Value Budget Bar**: `BudgetWidget`'s secondary row beneath the progress bar now shows only `₹X remaining` (or `₹X over budget` when applicable). The redundant `spent of total` figure and the `Safe to spend today` pill have been removed from the dashboard's top-level view — those numbers are still available elsewhere when the user drills in, keeping the main bar scannable in under a second.
+- **Tighter Vertical Rhythm (≈ 8–12 px per gap)**: `mb-6 → mb-4` on the summary cards grid, the Quick Add form, the budget widget (both the active widget and its dashed empty-state), and the charts row. `pt-6 → pt-4` on the main container. Net effect lifts the Weekly Trend / Category Pie chart row up into the first-screen viewport on standard 1080p displays without removing any features or compressing card internals.
+- **Visual Hierarchy Preserved**: Primary balances (₹ amounts) keep their green/red color intent and bold weight, so the eye still lands on them first; trend deltas now read as quiet, contextual subtitles; the budget bar telegraphs its single most-asked question ("how much is left?") immediately.
+
+---
+
+## Phase 65 — Sticky Header Polish: Flush Seam, Condensed Height, Demoted Quick-Add
+
+### Feature
+Final pass on the dashboard's top chrome (`app/(dashboard)/dashboard/page.tsx`, `components/dashboard/dynamic-greeting.tsx`, `components/dashboard/quick-add-form.tsx`) to align the sidebar/header seam, shorten the sticky header, and re-balance button visual rank.
+
+### UX Design & Changes
+- **Flush Sidebar/Header Seam**: The sticky greeting bar now uses a fixed `h-16` to match the sidebar's logo section (`Sidebar` top container is also `h-16`), so the two horizontal `border-b border-gray-100` strokes meet on the same Y-axis instead of stepping across the seam. The translucent `bg-white/95 backdrop-blur-sm` was swapped for solid `bg-white` to eliminate the cream `#F9F8F5` bleed-through that was reading as a hairline gap at the boundary.
+- **Condensed Header Height**: Removed the `py-3.5` padding in favour of the `h-16 flex items-center` constraint — net vertical saving of ~14 px above the first content row. Greeting type scaled down in `DynamicGreeting`: title `text-xl → text-lg` with `leading-tight`; subtitle `text-sm → text-xs` with `leading-tight`. The two-line greeting block now sits comfortably centered against the sidebar logo, and the action buttons (`RecurringDialog` + `TransactionDialog`) share the same horizontal midline.
+- **Demoted Quick-Add `Log` Button**: Stripped the primary `bg-[#1E6B4E] text-white` styling and re-skinned the button as a secondary neutral control — `bg-gray-100 text-gray-700` with a `border-gray-200` outline and a `hover:bg-gray-200 hover:text-gray-900` interaction state. The primary brand green is now reserved for the top-right `+ Add Transaction` button, restoring a single dominant call-to-action above the fold and a clear visual hierarchy.
+
+---
+
+## Phase 66 — Category Pie Chart: Top-5 Progressive Disclosure
+
+### Feature
+Capped the `CategoryPieChart` (`components/dashboard/category-pie-chart.tsx`) legend at five rows and lifted the long tail into a centered modal so the dashboard's right column stays height-locked against the adjacent Weekly Trend bar chart, regardless of how many categories a user has.
+
+### UX Design & Changes
+- **Top-N Truncation (TOP_N = 5)**: The card's legend now renders the five highest-spend categories only, via a defensive `[...data].sort((a, b) => b.value - a.value).slice(0, 5)`. Card height is fixed by construction — a user with 3 categories and a user with 30 see the exact same card footprint, so the right column no longer pops taller than the trend chart on the left.
+- **"View All" Trigger — Not a Dropdown**: When `sorted.length > 5`, a subtle full-width button (`bg-gray-50` / `text-gray-600` / `hover:bg-gray-100`) labelled `View all {N} categories` appears under the top-5 list. It does not toggle in-place expansion, does not animate the card open, and does not render a popover anchored to itself — the card's height stays locked.
+- **Centered Master-View Modal**: Clicking the trigger opens a Base UI `Dialog` (reused from `components/ui/dialog.tsx`) at `sm:max-w-lg` with a dimmed `bg-black/40` + `backdrop-blur-sm` overlay. Header shows `Expenses by category` with a tabular `{count} categories · {total} total this month` subtitle. The body lists the **complete sorted ranking** (`#1` through `#N` — not just the "remaining" tail), inside an `overflow-y-auto max-h-[60vh]` scroller for very long lists. Closable via the built-in `X` button or by clicking the dimmed overlay.
+- **Shared `LegendRow` Component**: Both the card legend and the modal list render through a single internal `LegendRow` component, so the icon chip, percentage badge, and INR amount typography stay perfectly consistent between the two surfaces.

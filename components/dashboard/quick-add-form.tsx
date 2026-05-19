@@ -97,7 +97,7 @@ export function QuickAddForm({ categories }: Props) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-xl border border-gray-100 bg-white px-4 py-3 mb-6"
+      className="rounded-xl border border-gray-100 bg-white px-4 py-3 mb-4"
     >
       <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
         {/* Label */}
@@ -157,12 +157,14 @@ export function QuickAddForm({ categories }: Props) {
 
           {/* Submit — disabled only while amount is empty (natural guard),
               NOT disabled while awaiting the server. */}
+          {/* Secondary visual rank — yields the primary green to the top-right
+              "+ Add Transaction" button so the eye lands there first. */}
           <button
             type="submit"
             disabled={!amount.trim()}
             className={cn(
-              "h-9 shrink-0 rounded-lg bg-[#1E6B4E] px-5 text-sm font-semibold text-white",
-              "transition-colors hover:bg-[#165a41] active:scale-[0.98]",
+              "h-9 shrink-0 rounded-lg border border-gray-200 bg-gray-100 px-5 text-sm font-semibold text-gray-700",
+              "transition-colors hover:bg-gray-200 hover:text-gray-900 active:scale-[0.98]",
               "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
           >

@@ -40,10 +40,10 @@ export function DynamicGreeting({ firstName }: DynamicGreetingProps) {
   if (!greeting) {
     return (
       <div className="min-w-0">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 truncate opacity-0">
+        <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100 leading-tight truncate opacity-0">
           Dashboard
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate opacity-0">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-tight truncate opacity-0">
           Loading...
         </p>
       </div>
@@ -52,10 +52,10 @@ export function DynamicGreeting({ firstName }: DynamicGreetingProps) {
 
   return (
     <div className="min-w-0">
-      <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 truncate">
+      <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">
         {greeting.title}
       </h1>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-tight truncate">
         {greeting.subtitle}
       </p>
     </div>

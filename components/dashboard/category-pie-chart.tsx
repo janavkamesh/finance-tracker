@@ -1,8 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { PieChart, Pie, Cell, Sector, Tooltip, ResponsiveContainer } from "recharts";
 import { formatINR } from "@/lib/utils";
 import { getCategoryIcon } from "@/lib/category-icons";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface SliceProps {
   cx?: number;
@@ -49,7 +56,45 @@ const FALLBACK_COLORS = [
   "#ea580c",
 ];
 
+const TOP_N = 5;
+
+function LegendRow({
+  item,
+  index,
+  total,
+}: {
+  item: CategorySlice;
+  index: number;
+  total: number;
+}) {
+  const color = item.color || FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+  const Icon = getCategoryIcon({ name: item.name, icon: item.icon });
+  return (
+    <li className="flex items-center justify-between text-sm">
+      <div className="flex items-center gap-2 min-w-0">
+        <span
+          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+          style={{ backgroundColor: `${color}20`, color }}
+        >
+          <Icon className="size-3" />
+        </span>
+        <span className="truncate text-gray-700">{item.name}</span>
+      </div>
+      <div className="flex items-center gap-2 shrink-0 ml-2">
+        <span className="text-gray-400 text-xs">
+          {((item.value / total) * 100).toFixed(0)}%
+        </span>
+        <span className="font-medium tabular-nums text-gray-900">
+          {formatINR(item.value)}
+        </span>
+      </div>
+    </li>
+  );
+}
+
 export function CategoryPieChart({ data }: { data: CategorySlice[] }) {
+  const [viewAllOpen, setViewAllOpen] = useState(false);
+
   if (data.length === 0) {
     return (
       <div className="flex h-[280px] flex-col items-center justify-center gap-2 text-center">
@@ -64,13 +109,18 @@ export function CategoryPieChart({ data }: { data: CategorySlice[] }) {
   }
 
   const total = data.reduce((s, d) => s + d.value, 0);
+  // Defensive sort — the page already pre-sorts but enforce here so the
+  // Top-N truncation is always against highest-spend descending.
+  const sorted = [...data].sort((a, b) => b.value - a.value);
+  const visible = sorted.slice(0, TOP_N);
+  const hasOverflow = sorted.length > TOP_N;
 
   return (
     <div className="flex flex-col gap-4">
       <ResponsiveContainer width="100%" height={200}>
         <PieChart>
           <Pie
-            data={data}
+            data={sorted}
             cx="50%"
             cy="50%"
             innerRadius={55}
@@ -80,7 +130,7 @@ export function CategoryPieChart({ data }: { data: CategorySlice[] }) {
             stroke="none"
             activeShape={ActiveSlice}
           >
-            {data.map((entry, i) => (
+            {sorted.map((entry, i) => (
               <Cell
                 key={entry.name}
                 fill={entry.color || FALLBACK_COLORS[i % FALLBACK_COLORS.length]}
@@ -99,34 +149,49 @@ export function CategoryPieChart({ data }: { data: CategorySlice[] }) {
         </PieChart>
       </ResponsiveContainer>
 
-      {/* Legend */}
+      {/* Top-N legend — fixed height regardless of total category count */}
       <ul className="space-y-2">
-        {data.map((item, i) => {
-          const color = item.color || FALLBACK_COLORS[i % FALLBACK_COLORS.length];
-          const Icon = getCategoryIcon({ name: item.name, icon: item.icon });
-          return (
-          <li key={item.name} className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2 min-w-0">
-              <span
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-                style={{ backgroundColor: `${color}20`, color }}
-              >
-                <Icon className="size-3" />
-              </span>
-              <span className="truncate text-gray-700">{item.name}</span>
-            </div>
-            <div className="flex items-center gap-2 shrink-0 ml-2">
-              <span className="text-gray-400 text-xs">
-                {((item.value / total) * 100).toFixed(0)}%
-              </span>
-              <span className="font-medium tabular-nums text-gray-900">
-                {formatINR(item.value)}
-              </span>
-            </div>
-          </li>
-          );
-        })}
+        {visible.map((item, i) => (
+          <LegendRow key={item.name} item={item} index={i} total={total} />
+        ))}
       </ul>
+
+      {/* Progressive disclosure: opens a modal with the full list. The card
+          itself never grows vertically, so it stays aligned with the chart
+          next to it. */}
+      {hasOverflow && (
+        <button
+          type="button"
+          onClick={() => setViewAllOpen(true)}
+          className="mt-1 w-full rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E6B4E]/30"
+          aria-label={`View all ${sorted.length} categories`}
+        >
+          View all {sorted.length} categories
+        </button>
+      )}
+
+      <Dialog open={viewAllOpen} onOpenChange={setViewAllOpen}>
+        <DialogContent
+          className="sm:max-w-lg p-0 overflow-hidden"
+          overlayClassName="bg-black/40 supports-backdrop-filter:backdrop-blur-sm"
+          onClose={() => setViewAllOpen(false)}
+        >
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-100">
+            <DialogTitle className="text-base font-semibold text-gray-900">
+              Expenses by category
+            </DialogTitle>
+            <p className="text-xs text-gray-500 tabular-nums">
+              {sorted.length} categories · {formatINR(total)} total this month
+            </p>
+          </DialogHeader>
+
+          <ul className="px-6 py-5 space-y-3 max-h-[60vh] overflow-y-auto">
+            {sorted.map((item, i) => (
+              <LegendRow key={item.name} item={item} index={i} total={total} />
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
