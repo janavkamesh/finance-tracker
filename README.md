@@ -1971,3 +1971,15 @@ Replaced native, clunky browser date inputs with a custom, beautifully styled Re
 - **Tailored Popover UI**: Embedded the Shadcn Popover & Calendar components, wrapping them in a standard headless React hook controller structure.
 - **Brand Colors & Typography**: Replaced default browser blue selections with the dashboard's core forest green highlight (`bg-[#1E6B4E]`). Added premium hover states (`hover:bg-slate-100 text-slate-900`) and styled using clean, rounded corners (`rounded-md`).
 - **Interactive Utilities**: Provided clear, minimalist text links for "Today" and "Clear" actions to avoid bulky buttons.
+
+---
+
+## Phase 61 — Resolving TypeScript Compilation & Deployment Errors
+
+### Feature
+Resolved multiple critical TypeScript errors in `transaction-manager.tsx`, `date-picker.tsx`, and `calendar.tsx` to enable successful Vercel production builds.
+
+### UX Design & Changes
+- **Type Safety Restoration**: Restored the accidentally omitted `category_name` property to the `TxnRow` interface to fix dynamic data mapping compilation failures.
+- **Base UI Integration**: Refactored the popover trigger in `date-picker.tsx` to utilize Base UI's native `render` composition property, bypassing unsupported Radix-style `asChild` props.
+- **Day Picker v10 API Compatibility**: Cleaned up the Shadcn Calendar integration by mapping custom table overrides to the new `month_grid` classNames key and removing deprecated `initialFocus` flags.

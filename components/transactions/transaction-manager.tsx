@@ -17,6 +17,7 @@ interface TxnRow {
   description: string;
   category_id: string;
   payment_method?: string | null;
+  category_name?: string | null;
   category_color?: string | null;
   category_icon?: string | null;
   category_user_id?: string | null;

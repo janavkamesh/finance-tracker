@@ -25,18 +25,20 @@ export function DatePicker({ value, onChange, className, placeholder = "Pick a d
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant={"outline"}
-          className={cn(
-            "w-full justify-start text-left font-normal rounded-md border-gray-300 shadow-sm focus-visible:ring-2 focus-visible:ring-[#1E6B4E]",
-            !value && "text-muted-foreground",
-            className
-          )}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {value ? format(value, "PP") : <span>{placeholder}</span>}
-        </Button>
+      <PopoverTrigger
+        render={
+          <Button
+            variant={"outline"}
+            className={cn(
+              "w-full justify-start text-left font-normal rounded-md border-gray-300 shadow-sm focus-visible:ring-2 focus-visible:ring-[#1E6B4E]",
+              !value && "text-muted-foreground",
+              className
+            )}
+          />
+        }
+      >
+        <CalendarIcon className="mr-2 h-4 w-4" />
+        {value ? format(value, "PP") : <span>{placeholder}</span>}
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
@@ -46,7 +48,6 @@ export function DatePicker({ value, onChange, className, placeholder = "Pick a d
             onChange?.(date ?? null)
             setIsOpen(false)
           }}
-          initialFocus
           className="rounded-md"
         />
         <div className="flex items-center justify-between p-3 border-t">
