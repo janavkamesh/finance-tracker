@@ -1,12 +1,41 @@
 "use client";
 
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, Sector, Tooltip, ResponsiveContainer } from "recharts";
 import { formatINR } from "@/lib/utils";
+import { getCategoryIcon } from "@/lib/category-icons";
+
+interface SliceProps {
+  cx?: number;
+  cy?: number;
+  innerRadius?: number;
+  outerRadius?: number;
+  startAngle?: number;
+  endAngle?: number;
+  fill?: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ActiveSlice(props: any) {
+  const { cx = 0, cy = 0, innerRadius = 0, outerRadius = 0, startAngle = 0, endAngle = 0, fill = "" } = props as SliceProps;
+  return (
+    <Sector
+      cx={cx}
+      cy={cy}
+      innerRadius={innerRadius}
+      outerRadius={outerRadius + 6}
+      startAngle={startAngle}
+      endAngle={endAngle}
+      fill={fill}
+      stroke="none"
+    />
+  );
+}
 
 export interface CategorySlice {
   name: string;
   value: number;
   color: string;
+  icon?: string | null;
 }
 
 const FALLBACK_COLORS = [
@@ -48,11 +77,14 @@ export function CategoryPieChart({ data }: { data: CategorySlice[] }) {
             outerRadius={85}
             paddingAngle={2}
             dataKey="value"
+            stroke="none"
+            activeShape={ActiveSlice}
           >
             {data.map((entry, i) => (
               <Cell
                 key={entry.name}
                 fill={entry.color || FALLBACK_COLORS[i % FALLBACK_COLORS.length]}
+                stroke="none"
               />
             ))}
           </Pie>
@@ -69,16 +101,18 @@ export function CategoryPieChart({ data }: { data: CategorySlice[] }) {
 
       {/* Legend */}
       <ul className="space-y-2">
-        {data.map((item, i) => (
+        {data.map((item, i) => {
+          const color = item.color || FALLBACK_COLORS[i % FALLBACK_COLORS.length];
+          const Icon = getCategoryIcon({ name: item.name, icon: item.icon });
+          return (
           <li key={item.name} className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2 min-w-0">
               <span
-                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{
-                  backgroundColor:
-                    item.color || FALLBACK_COLORS[i % FALLBACK_COLORS.length],
-                }}
-              />
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: `${color}20`, color }}
+              >
+                <Icon className="size-3" />
+              </span>
               <span className="truncate text-gray-700">{item.name}</span>
             </div>
             <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -90,7 +124,8 @@ export function CategoryPieChart({ data }: { data: CategorySlice[] }) {
               </span>
             </div>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </div>
   );

@@ -1,23 +1,35 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type React from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { Download, MoreVertical, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CustomSelect, type SelectOption } from "@/components/ui/custom-select";
+import { getCategoryIcon } from "@/lib/category-icons";
+import { ExportDialog } from "@/components/transactions/export-dialog";
 
 interface Category {
   id: string;
   name: string;
+  color?: string | null;
+  icon?: string | null;
 }
 
-const PERIODS = [
+const PERIODS: SelectOption[] = [
   { label: "This month", value: "this_month" },
   { label: "Last month", value: "last_month" },
   { label: "Last 3 months", value: "3_months" },
   { label: "All time", value: "all" },
-] as const;
+];
 
-export function TransactionFilters({ categories }: { categories: Category[] }) {
+export function TransactionFilters({
+  categories,
+  showExportMenu = false,
+}: {
+  categories: Category[];
+  showExportMenu?: boolean;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -29,14 +41,39 @@ export function TransactionFilters({ categories }: { categories: Category[] }) {
 
   const [searchValue, setSearchValue] = useState(currentSearch);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close kebab menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [menuOpen]);
+
+  // Prefetch income/expense filter variants so first-click is instant
+  useEffect(() => {
+    router.prefetch(`${pathname}?type=income`);
+    router.prefetch(`${pathname}?type=expense`);
+  }, [router, pathname]);
 
   const updateParam = useCallback(
     (key: string, value: string) => {
       const next = new URLSearchParams(params.toString());
-      if (value && value !== "all") {
+      if (value && value !== "all" && value !== "this_month") {
         next.set(key, value);
-      } else {
+      } else if (key === "period" && value === "this_month") {
         next.delete(key);
+      } else if (value === "all") {
+        next.delete(key);
+      } else {
+        next.set(key, value);
       }
       router.replace(`${pathname}?${next.toString()}`);
     },
@@ -58,6 +95,18 @@ export function TransactionFilters({ categories }: { categories: Category[] }) {
     currentType !== "all" ||
     currentPeriod !== "this_month" ||
     currentCategory !== "all";
+
+  const categoryOptions: SelectOption[] = [
+    { label: "All categories", value: "all" },
+    ...categories.map((c) => {
+      const Icon = getCategoryIcon(c);
+      return {
+        label: c.name,
+        value: c.id,
+        icon: <Icon className="size-3.5" style={{ color: c.color ?? "#6b7280" }} />,
+      };
+    }),
+  ];
 
   function clearAll() {
     setSearchValue("");
@@ -101,33 +150,23 @@ export function TransactionFilters({ categories }: { categories: Category[] }) {
       </div>
 
       {/* Period */}
-      <select
+      <CustomSelect
+        options={PERIODS}
         value={currentPeriod}
-        onChange={(e) => updateParam("period", e.target.value)}
-        className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1E6B4E]/30 focus:border-[#1E6B4E] transition-colors"
-      >
-        {PERIODS.map((p) => (
-          <option key={p.value} value={p.value}>
-            {p.label}
-          </option>
-        ))}
-      </select>
+        onChange={(v) => updateParam("period", v)}
+        className="w-full sm:w-36"
+      />
 
       {/* Category */}
       {categories.length > 0 && (
-        <select
+        <CustomSelect
+          options={categoryOptions}
           value={currentCategory}
-          onChange={(e) => updateParam("category", e.target.value)}
-          className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1E6B4E]/30 focus:border-[#1E6B4E] transition-colors"
-        >
-          <option value="all">All categories</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => updateParam("category", v)}
+          className="w-full sm:w-40"
+        />
       )}
+
 
       {/* Clear */}
       {hasActiveFilters && (
@@ -138,6 +177,41 @@ export function TransactionFilters({ categories }: { categories: Category[] }) {
           <X className="size-3.5" />
           Clear
         </button>
+      )}
+
+      {/* Kebab actions menu */}
+      {showExportMenu && (
+        <>
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((s) => !s)}
+              className={cn(
+                "flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700",
+                menuOpen && "bg-gray-50 text-gray-700 border-gray-300"
+              )}
+              aria-label="More actions"
+            >
+              <MoreVertical className="size-4" />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-10 z-20 min-w-[160px] rounded-xl border border-gray-200 bg-white shadow-lg py-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setExportOpen(true);
+                  }}
+                  className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <Download className="size-3.5 text-gray-500 shrink-0" />
+                  Export CSV
+                </button>
+              </div>
+            )}
+          </div>
+          <ExportDialog open={exportOpen} onOpenChange={setExportOpen} />
+        </>
       )}
     </div>
   );

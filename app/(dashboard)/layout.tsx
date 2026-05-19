@@ -27,7 +27,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F9F8F5]">
+    <div className="flex min-h-screen bg-[#F9F8F5] dark:bg-gray-900">
       {/* Desktop sidebar */}
       <div className="hidden md:flex">
         <Sidebar fullName={fullName} userInitials={userInitials} />

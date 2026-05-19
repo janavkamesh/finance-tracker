@@ -132,3 +132,61 @@
     line-height: 1.2;
   }
 }
+
+/* ── Global dark mode overrides for hardcoded Tailwind colour utilities ──── */
+/* These complement the CSS-variable layer and catch static classes that      */
+/* can't be updated at the component level (e.g. third-party, generated).     */
+
+.dark .bg-white { background-color: rgb(17 24 39); }           /* gray-900 */
+.dark .bg-gray-50 { background-color: rgb(17 24 39); }
+.dark .bg-gray-50\/60 { background-color: rgb(17 24 39 / 0.6); }
+.dark .bg-white\/95 { background-color: rgb(17 24 39 / 0.95); }
+.dark .bg-gray-100 { background-color: rgb(31 41 55); }        /* gray-800 */
+
+.dark .text-gray-900 { color: rgb(243 244 246); }              /* gray-100 */
+.dark .text-gray-800 { color: rgb(229 231 235); }              /* gray-200 */
+.dark .text-gray-700 { color: rgb(209 213 219); }              /* gray-300 */
+.dark .text-gray-600 { color: rgb(156 163 175); }              /* gray-400 */
+.dark .text-gray-500 { color: rgb(107 114 128); }              /* gray-500 */
+.dark .text-gray-400 { color: rgb(75 85 99); }                 /* gray-600 */
+
+.dark .border-gray-100 { border-color: rgb(31 41 55); }        /* gray-800 */
+.dark .border-gray-200 { border-color: rgb(55 65 81); }        /* gray-700 */
+.dark .border-gray-100\/60 { border-color: rgb(31 41 55 / 0.6); }
+
+.dark .divide-gray-50 > * + * { border-color: rgb(31 41 55); }
+.dark .divide-gray-100 > * + * { border-color: rgb(31 41 55); }
+
+.dark .hover\:bg-gray-50:hover { background-color: rgb(31 41 55); }
+.dark .hover\:bg-gray-100:hover { background-color: rgb(55 65 81); }
+.dark .hover\:bg-gray-50\/60:hover { background-color: rgb(31 41 55 / 0.6); }
+.dark .hover\:text-gray-600:hover { color: rgb(156 163 175); }
+.dark .hover\:text-gray-900:hover { color: rgb(243 244 246); }
+
+/* Backdrop blur header */
+.dark .backdrop-blur-sm { --tw-backdrop-blur: blur(4px); }
+
+/* Input fields */
+.dark input:not([class*="bg-"]),
+.dark textarea:not([class*="bg-"]) {
+  background-color: rgb(31 41 55);
+  color: rgb(243 244 246);
+  border-color: rgb(55 65 81);
+}
+.dark .bg-gray-50 input,
+.dark input.bg-gray-50 {
+  background-color: rgb(31 41 55);
+  color: rgb(243 244 246);
+}
+
+/* Chart tooltip & popover backgrounds */
+.dark .recharts-tooltip-wrapper .recharts-default-tooltip {
+  background-color: rgb(31 41 55) !important;
+  border-color: rgb(55 65 81) !important;
+  color: rgb(243 244 246) !important;
+}
+
+/* Dialog / modal overlay content */
+.dark [data-radix-popper-content-wrapper] {
+  --popover-bg: rgb(31 41 55);
+}

@@ -7,10 +7,46 @@ export const metadata: Metadata = {
 import { createClient, getUser } from "@/lib/supabase/server";
 import { formatINR } from "@/lib/utils";
 import { TransactionDialog } from "@/components/transactions/transaction-dialog";
-import { DeleteTransactionButton } from "@/components/transactions/delete-transaction-button";
 import { TransactionFilters } from "@/components/transactions/transaction-filters";
+import { TransactionCalendar } from "@/components/transactions/transaction-calendar";
+import { TransactionManager } from "@/components/transactions/transaction-manager";
+import { ActiveGoalsWidget } from "@/components/transactions/active-goals-widget";
+import { UpcomingBillsWidget } from "@/components/transactions/upcoming-bills-widget";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+
+// ── Active period → representative month for smart date defaulting ────────────
+// Returns "YYYY-MM" for periods anchored to a past month, undefined otherwise.
+function getPeriodMonth(period: string): string | undefined {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  if (period === "last_month") {
+    const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+  }
+  if (period === "3_months") {
+    const d = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+  }
+  return undefined; // this_month / all → default to today inside the dialog
+}
+
+// ── Category-aware empty-state microcopy ──────────────────────────────────────
+// Keys must exactly match the system category names seeded in the DB.
+const CATEGORY_EMPTY_MESSAGES: Record<string, string> = {
+  "Bills & Recharge":  "All paid up! No bills or recharges logged yet.",
+  "Education":         "No study expenses this month. Learning for free?",
+  "EMI / Loans":       "Debt-free for now! No EMI or loan payments found.",
+  "Entertainment":     "All work and no play? No entertainment logged yet.",
+  "Food & Dining":     "No dining out yet! Home-cooked meals it is.",
+  "Health":            "Looking healthy! No medical or health expenses found.",
+  "Other":             "No miscellaneous transactions logged yet.",
+  "Rent & Housing":    "No housing expenses logged. Couch surfing this month?",
+  "Salary / Income":   "No income logged yet. Waiting for payday?",
+  "Shopping":          "Your wallet is safe! No shopping trips logged.",
+  "Transport":         "No transport expenses. Staying local this month?",
+  "Travel":            "No vacations logged. Time to plan a getaway?",
+};
 
 function getDateRange(period: string): { start: string; end?: string } | null {
   const now = new Date();
@@ -35,6 +71,56 @@ function getDateRange(period: string): { start: string; end?: string } | null {
   return null; // all time
 }
 
+function getPreviousDateRange(period: string): { start: string; end?: string } | null {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+  if (period === "this_month") {
+    const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const last = new Date(now.getFullYear(), now.getMonth(), 0);
+    return { start: fmt(first), end: fmt(last) };
+  }
+  if (period === "last_month") {
+    const first = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+    const last = new Date(now.getFullYear(), now.getMonth() - 1, 0);
+    return { start: fmt(first), end: fmt(last) };
+  }
+  if (period === "3_months") {
+    const first = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const last = new Date(now.getFullYear(), now.getMonth() - 2, 0);
+    return { start: fmt(first), end: fmt(last) };
+  }
+  return null;
+}
+
+function DeltaBadge({ current, previous, type }: { current: number; previous: number; type: "income" | "expense" | "net" }) {
+  if (previous === 0) return null;
+  const delta = ((current - previous) / Math.abs(previous)) * 100;
+  
+  if (delta === 0) return null;
+  
+  const isPositive = delta > 0;
+  const isNegative = delta < 0;
+  
+  let isGood = false;
+  if (type === "income" || type === "net") isGood = isPositive;
+  if (type === "expense") isGood = isNegative;
+  
+  const colorClass = isGood ? "text-green-600" : "text-red-500";
+  const icon = isPositive ? "↑" : "↓";
+  
+  return (
+    <div className="flex items-center gap-1 mt-1">
+       <span className={`text-xs font-medium ${colorClass}`}>
+         {icon} {Math.abs(delta).toFixed(0)}%
+       </span>
+       <span className="text-xs text-gray-400">vs last month</span>
+    </div>
+  );
+}
+
 export default async function TransactionsPage({
   searchParams,
 }: {
@@ -52,11 +138,23 @@ export default async function TransactionsPage({
   // Categories for filter dropdown + add/edit dialog
   const { data: categories } = await supabase
     .from("categories")
-    .select("id, name, type, color")
+    .select("id, name, type, color, icon")
     .or(`user_id.eq.${user!.id},user_id.is.null`)
     .order("name");
 
   const cats = categories ?? [];
+
+  // Active period month for context-aware date defaulting in Add Transaction dialog
+  const activePeriodMonth = getPeriodMonth(period);
+
+  // Resolve active category name for dynamic empty-state messages
+  const activeCategoryName = categoryFilter
+    ? (cats.find((c) => c.id === categoryFilter)?.name ?? null)
+    : null;
+  const emptyFilterMessage =
+    activeCategoryName && CATEGORY_EMPTY_MESSAGES[activeCategoryName]
+      ? CATEGORY_EMPTY_MESSAGES[activeCategoryName]
+      : "No transactions match your current filters.";
 
   // Build transactions query with filters
   let query = supabase
@@ -75,8 +173,26 @@ export default async function TransactionsPage({
   if (dateRange?.start) query = query.gte("date", dateRange.start);
   if (dateRange?.end) query = query.lte("date", dateRange.end);
 
-  const { data: transactions } = await query;
+  let prevQuery = supabase.from("transactions").select("amount, type").eq("user_id", user!.id);
+  if (search) prevQuery = prevQuery.ilike("description", `%${search}%`);
+  if (typeFilter === "income" || typeFilter === "expense") prevQuery = prevQuery.eq("type", typeFilter);
+  if (categoryFilter) prevQuery = prevQuery.eq("category_id", categoryFilter);
+  
+  const prevDateRange = getPreviousDateRange(period);
+  if (prevDateRange?.start) prevQuery = prevQuery.gte("date", prevDateRange.start);
+  if (prevDateRange?.end) prevQuery = prevQuery.lte("date", prevDateRange.end);
+
+  // Run both queries in parallel
+  const [
+    { data: transactions },
+    { data: prevTransactionsData }
+  ] = await Promise.all([
+    query,
+    prevDateRange ? prevQuery : Promise.resolve({ data: [] })
+  ]);
+
   const txns = transactions ?? [];
+  const prevTxns = prevTransactionsData ?? [];
 
   // Summary stats from filtered results
   const totalIncome = txns
@@ -86,6 +202,15 @@ export default async function TransactionsPage({
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const net = totalIncome - totalExpense;
+
+  // Previous summary stats
+  const prevIncome = prevTxns
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+  const prevExpense = prevTxns
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+  const prevNet = prevIncome - prevExpense;
 
   return (
     <main className="p-6 md:p-8">
@@ -99,44 +224,60 @@ export default async function TransactionsPage({
               : `${txns.length} transaction${txns.length !== 1 ? "s" : ""} found`}
           </p>
         </div>
-        <TransactionDialog categories={cats} />
+        <div className="flex items-center gap-2">
+          <TransactionDialog categories={cats} activeMonth={activePeriodMonth} />
+        </div>
       </div>
 
-      {/* Summary stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 lg:gap-8 items-start">
+        <div className="min-w-0">
+          {/* Summary stats */}
       <div className="grid grid-cols-3 gap-3 mb-5">
-        <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-          <p className="text-xs text-gray-500 mb-1">Income</p>
-          <p className="text-base font-semibold text-green-600 tabular-nums">
-            {formatINR(totalIncome)}
-          </p>
+        <div className="rounded-xl border border-gray-100 bg-white px-4 py-3 flex flex-col justify-between">
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Income</p>
+            <p className="text-base font-semibold text-green-600 tabular-nums">
+              {formatINR(totalIncome)}
+            </p>
+          </div>
+          <DeltaBadge current={totalIncome} previous={prevIncome} type="income" />
         </div>
-        <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-          <p className="text-xs text-gray-500 mb-1">Expenses</p>
-          <p className="text-base font-semibold text-red-600 tabular-nums">
-            {formatINR(totalExpense)}
-          </p>
+        <div className="rounded-xl border border-gray-100 bg-white px-4 py-3 flex flex-col justify-between">
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Expenses</p>
+            <p className="text-base font-semibold text-red-600 tabular-nums">
+              {formatINR(totalExpense)}
+            </p>
+          </div>
+          <DeltaBadge current={totalExpense} previous={prevExpense} type="expense" />
         </div>
-        <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-          <p className="text-xs text-gray-500 mb-1">Net</p>
-          <p
-            className={`text-base font-semibold tabular-nums ${
-              net >= 0 ? "text-green-600" : "text-red-600"
-            }`}
-          >
-            {net >= 0 ? "+" : ""}
-            {formatINR(net)}
-          </p>
+        <div className="rounded-xl border border-gray-100 bg-white px-4 py-3 flex flex-col justify-between">
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Net</p>
+            <p
+              className={`text-base font-semibold tabular-nums ${
+                net >= 0 ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {net >= 0 ? "+" : ""}
+              {formatINR(net)}
+            </p>
+          </div>
+          <DeltaBadge current={net} previous={prevNet} type="net" />
         </div>
       </div>
 
-      {/* Filters — wrapped in Suspense because useSearchParams is used inside */}
-      <div className="mb-4">
-        <Suspense fallback={null}>
-          <TransactionFilters
-            categories={cats.map((c) => ({ id: c.id, name: c.name }))}
-          />
-        </Suspense>
-      </div>
+      {/* Filters — always visible when there are no transactions (so user can clear them) */}
+      {txns.length === 0 && (search || typeFilter || categoryFilter || period !== "this_month") && (
+        <div className="mb-4">
+          <Suspense fallback={null}>
+            <TransactionFilters
+              categories={cats.map((c) => ({ id: c.id, name: c.name }))}
+              showExportMenu
+            />
+          </Suspense>
+        </div>
+      )}
 
       {/* Empty state */}
       {txns.length === 0 && (
@@ -148,7 +289,7 @@ export default async function TransactionsPage({
           </div>
           {search || typeFilter || categoryFilter ? (
             <>
-              <p className="text-sm font-medium text-gray-900">No transactions match your filters</p>
+              <p className="text-sm font-medium text-gray-900">{emptyFilterMessage}</p>
               <p className="text-sm text-gray-500 mt-1">Try adjusting or clearing the filters above.</p>
             </>
           ) : (
@@ -157,93 +298,53 @@ export default async function TransactionsPage({
               <p className="text-sm text-gray-500 mt-1 mb-5">
                 Track your first income or expense to see it here.
               </p>
-              <TransactionDialog categories={cats} />
+              <TransactionDialog categories={cats} activeMonth={activePeriodMonth} />
             </>
           )}
         </div>
       )}
 
-      {/* Transaction list */}
+      {/* Transaction list + filters — managed by client component for bulk selection */}
       {txns.length > 0 && (
-        <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
-          <ul className="divide-y divide-gray-50">
-            {txns.map((txn) => {
+        <Suspense fallback={null}>
+          <TransactionManager
+            initialTransactions={txns.slice(0, 20).map((txn) => {
               const cat = txn.categories as
                 | { name: string; color: string | null; type: string }
                 | null;
-              const isIncome = txn.type === "income";
-
-              return (
-                <li
-                  key={txn.id}
-                  className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/60 transition-colors group"
-                >
-                  <div
-                    className={`h-2 w-2 shrink-0 rounded-full ${
-                      isIncome ? "bg-green-500" : "bg-red-500"
-                    }`}
-                  />
-
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {txn.description}
-                    </p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {cat && (
-                        <span
-                          className="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium"
-                          style={{
-                            backgroundColor: cat.color
-                              ? `${cat.color}18`
-                              : "#f3f4f6",
-                            color: cat.color ?? "#6b7280",
-                          }}
-                        >
-                          {cat.name}
-                        </span>
-                      )}
-                      <span className="text-xs text-gray-400">
-                        {new Date(txn.date + "T00:00:00").toLocaleDateString(
-                          "en-IN",
-                          {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          },
-                        )}
-                      </span>
-                    </div>
-                  </div>
-
-                  <span
-                    className={`text-sm font-semibold tabular-nums shrink-0 ${
-                      isIncome ? "text-green-600" : "text-red-600"
-                    }`}
-                  >
-                    {isIncome ? "+" : "-"}
-                    {formatINR(txn.amount)}
-                  </span>
-
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <TransactionDialog
-                      categories={cats}
-                      transaction={{
-                        id: txn.id,
-                        type: txn.type as "income" | "expense",
-                        amount: txn.amount,
-                        category_id: txn.category_id,
-                        description: txn.description,
-                        date: txn.date,
-                      }}
-                    />
-                    <DeleteTransactionButton id={txn.id} />
-                  </div>
-                </li>
-              );
+              return {
+                id: txn.id,
+                type: txn.type as "income" | "expense",
+                amount: Number(txn.amount),
+                date: txn.date,
+                description: txn.description ?? "",
+                category_id: txn.category_id ?? "",
+                payment_method: null,
+                category_name: cat?.name ?? null,
+                category_color: cat?.color ?? null,
+                category_icon: null,
+              };
             })}
-          </ul>
-        </div>
+            categories={cats}
+            activeMonth={activePeriodMonth}
+            filters={{
+              search,
+              typeFilter,
+              categoryFilter,
+              period,
+            }}
+          />
+        </Suspense>
       )}
+        </div>
+
+        {/* Right Column: Spending Calendar, Goals & Bills Widgets */}
+        <div className="lg:sticky lg:top-8 w-full flex flex-col">
+          <TransactionCalendar inline />
+          <ActiveGoalsWidget transactions={txns} />
+          <UpcomingBillsWidget categories={cats} activeMonth={activePeriodMonth} />
+        </div>
+      </div>
     </main>
   );
 }

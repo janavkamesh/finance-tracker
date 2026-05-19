@@ -23,7 +23,15 @@ function formatK(value: number) {
   return `₹${value}`;
 }
 
-export function MonthlyBarChart({ data }: { data: MonthlyData[] }) {
+export function MonthlyBarChart({
+  data,
+  showMonthHint = true,
+}: {
+  data: MonthlyData[];
+  showMonthHint?: boolean;
+}) {
+  const activeMonths = data.filter((d) => d.income > 0 || d.expense > 0).length;
+
   if (data.every((d) => d.income === 0 && d.expense === 0)) {
     return (
       <div className="flex h-[280px] flex-col items-center justify-center gap-2 text-center">
@@ -37,47 +45,55 @@ export function MonthlyBarChart({ data }: { data: MonthlyData[] }) {
   }
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <BarChart data={data} barCategoryGap="30%" barGap={4}>
-        <CartesianGrid vertical={false} stroke="#f0f0f0" />
-        <XAxis
-          dataKey="month"
-          tick={{ fontSize: 12, fill: "#9ca3af" }}
-          axisLine={false}
-          tickLine={false}
-        />
-        <YAxis
-          tickFormatter={formatK}
-          tick={{ fontSize: 11, fill: "#9ca3af" }}
-          axisLine={false}
-          tickLine={false}
-          width={48}
-        />
-        <Tooltip
-          formatter={(value) =>
-            value != null
-              ? new Intl.NumberFormat("en-IN", {
-                  style: "currency",
-                  currency: "INR",
-                  maximumFractionDigits: 0,
-                }).format(Number(value))
-              : ""
-          }
-          contentStyle={{
-            borderRadius: 8,
-            border: "1px solid #e5e7eb",
-            fontSize: 13,
-          }}
-        />
-        <Legend
-          wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
-          formatter={(value) =>
-            value === "income" ? "Income" : "Expenses"
-          }
-        />
-        <Bar dataKey="income" fill="#16A34A" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="expense" fill="#DC2626" radius={[4, 4, 0, 0]} />
-      </BarChart>
-    </ResponsiveContainer>
+    <>
+      <ResponsiveContainer width="100%" height={280}>
+        <BarChart data={data} barCategoryGap="30%" barGap={4}>
+          <CartesianGrid vertical={false} stroke="#f0f0f0" />
+          <XAxis
+            dataKey="month"
+            tick={{ fontSize: 12, fill: "#9ca3af" }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis
+            tickFormatter={formatK}
+            tick={{ fontSize: 11, fill: "#9ca3af" }}
+            axisLine={false}
+            tickLine={false}
+            width={48}
+          />
+          <Tooltip
+            cursor={false}
+            formatter={(value) =>
+              value != null
+                ? new Intl.NumberFormat("en-IN", {
+                    style: "currency",
+                    currency: "INR",
+                    maximumFractionDigits: 0,
+                  }).format(Number(value))
+                : ""
+            }
+            contentStyle={{
+              borderRadius: 8,
+              border: "1px solid #e5e7eb",
+              fontSize: 13,
+            }}
+          />
+          <Legend
+            wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
+            formatter={(value) =>
+              value === "income" ? "Income" : "Expenses"
+            }
+          />
+          <Bar dataKey="income" fill="#16A34A" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="expense" fill="#DC2626" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+      {showMonthHint && activeMonths < 3 && (
+        <p className="mt-2 text-center text-xs text-gray-300">
+          Chart fills up as you add transactions over months
+        </p>
+      )}
+    </>
   );
 }

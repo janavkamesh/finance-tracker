@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+
 interface MobileHeaderProps {
   fullName: string;
   userInitials: string;
@@ -5,7 +8,7 @@ interface MobileHeaderProps {
 
 export function MobileHeader({ fullName, userInitials }: MobileHeaderProps) {
   return (
-    <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b border-gray-100 bg-white px-4 md:hidden">
+    <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 md:hidden">
       <div className="flex items-center gap-2">
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1E6B4E]">
           <svg
@@ -22,12 +25,19 @@ export function MobileHeader({ fullName, userInitials }: MobileHeaderProps) {
             />
           </svg>
         </div>
-        <span className="text-sm font-bold text-gray-900">FinTrack</span>
+        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">FinTrack</span>
       </div>
 
-      {/* User initials avatar */}
-      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1E6B4E]/10 text-xs font-semibold text-[#1E6B4E]">
-        {userInitials}
+      <div className="flex items-center gap-1">
+        <ThemeToggle />
+        {/* Avatar → tapping opens Settings */}
+        <Link
+          href="/settings"
+          title={fullName}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1E6B4E]/10 text-xs font-semibold text-[#1E6B4E] hover:bg-[#1E6B4E]/20 transition-colors"
+        >
+          {userInitials}
+        </Link>
       </div>
     </header>
   );

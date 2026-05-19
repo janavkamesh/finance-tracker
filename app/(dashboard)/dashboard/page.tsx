@@ -7,8 +7,18 @@ export const metadata: Metadata = {
 import { ArrowRight } from "lucide-react";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { formatINR } from "@/lib/utils";
-import { MonthlyBarChart, type MonthlyData } from "@/components/dashboard/monthly-bar-chart";
+import { type MonthlyData } from "@/components/dashboard/monthly-bar-chart";
+import { TrendChartCard } from "@/components/dashboard/trend-chart-card";
 import { CategoryPieChart, type CategorySlice } from "@/components/dashboard/category-pie-chart";
+import { CategoryLimits } from "@/components/dashboard/category-limits";
+import { DueRecurringCard } from "@/components/dashboard/due-recurring-card";
+import { BudgetSetupDialog } from "@/components/dashboard/budget-setup-dialog";
+import { QuickAddForm } from "@/components/dashboard/quick-add-form";
+import { UpcomingBillsCard, type UpcomingBill } from "@/components/dashboard/upcoming-bills-card";
+import { AnimatedTransactionList } from "@/components/transactions/animated-transaction-list";
+import { TransactionDialog } from "@/components/transactions/transaction-dialog";
+import { RecurringDialog } from "@/components/settings/recurring-dialog";
+import { DynamicGreeting } from "@/components/dashboard/dynamic-greeting";
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -20,6 +30,9 @@ function pad(n: number) {
 export default async function DashboardPage() {
   const [user, supabase] = await Promise.all([getUser(), createClient()]);
 
+  const fullName = (user?.user_metadata?.full_name as string | undefined) ?? "User";
+  const firstName = fullName.split(" ")[0];
+
   const now = new Date();
   const thisYear = now.getFullYear();
   const thisMonth = now.getMonth() + 1; // 1-12
@@ -28,19 +41,55 @@ export default async function DashboardPage() {
   const windowStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
   const windowStartStr = `${windowStart.getFullYear()}-${pad(windowStart.getMonth() + 1)}-01`;
 
-  // Fetch profile (for monthly budget) and transactions in parallel
-  const [{ data: profile }, { data: txns }] = await Promise.all([
+  const today = new Date().toISOString().slice(0, 10);
+
+  // End of current month — for upcoming bills query
+  const monthEnd = `${thisYear}-${pad(thisMonth)}-${pad(new Date(thisYear, thisMonth, 0).getDate())}`;
+
+  // Days remaining in month (include today, min 1)
+  const daysInMonth = new Date(thisYear, thisMonth, 0).getDate();
+  const daysRemaining = Math.max(daysInMonth - now.getDate() + 1, 1);
+
+  // Fetch profile, transactions, categories-with-limits, due recurring items, all categories, upcoming bills in parallel
+  const [{ data: profile }, { data: txns }, { data: limitedCats }, { data: dueRecurring }, { data: allCats }, { data: upcomingRecurring }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("monthly_budget")
+      .select("monthly_budget, rollover_enabled")
       .eq("id", user!.id)
       .single(),
     supabase
-    .from("transactions")
-    .select("type, amount, date, description, category_id, categories(name, color)")
-    .eq("user_id", user!.id)
-    .gte("date", windowStartStr)
-    .order("date", { ascending: false }),
+      .from("transactions")
+      .select("id, type, amount, date, description, category_id, payment_method, categories(name, color, icon)")
+      .eq("user_id", user!.id)
+      .gte("date", windowStartStr)
+      .order("date", { ascending: false }),
+    supabase
+      .from("categories")
+      .select("id, name, color, monthly_limit")
+      .or(`user_id.eq.${user!.id},user_id.is.null`)
+      .not("monthly_limit", "is", null),
+    supabase
+      .from("recurring_transactions")
+      .select("id, type, description, amount, next_due_date, frequency, categories(name)")
+      .eq("user_id", user!.id)
+      .eq("is_active", true)
+      .lte("next_due_date", today)
+      .order("next_due_date"),
+    supabase
+      .from("categories")
+      .select("id, name, type, color, monthly_limit, icon")
+      .or(`user_id.eq.${user!.id},user_id.is.null`)
+      .order("name"),
+    // Upcoming recurring bills later this month (not already due)
+    supabase
+      .from("recurring_transactions")
+      .select("id, type, description, amount, next_due_date, categories(name)")
+      .eq("user_id", user!.id)
+      .eq("is_active", true)
+      .gt("next_due_date", today)
+      .lte("next_due_date", monthEnd)
+      .order("next_due_date")
+      .limit(5),
   ]);
 
   const allTxns = txns ?? [];
@@ -91,24 +140,71 @@ export default async function DashboardPage() {
 
   // ── Category donut (current month expenses) ───────────────────────
   const expenseTxns = currentMonthTxns.filter((t) => t.type === "expense");
-  const catMap = new Map<string, { name: string; value: number; color: string }>();
+  const catMap = new Map<string, { name: string; value: number; color: string; icon: string | null }>();
   for (const t of expenseTxns) {
-    const cat = t.categories as unknown as { name: string; color: string | null } | null;
+    const cat = t.categories as unknown as { name: string; color: string | null; icon: string | null } | null;
     const name = cat?.name ?? "Uncategorised";
     const color = cat?.color ?? "#9ca3af";
+    const icon = cat?.icon ?? null;
     const existing = catMap.get(name);
     if (existing) {
       existing.value += Number(t.amount);
     } else {
-      catMap.set(name, { name, value: Number(t.amount), color });
+      catMap.set(name, { name, value: Number(t.amount), color, icon });
     }
   }
   const categoryData: CategorySlice[] = Array.from(catMap.values()).sort(
     (a, b) => b.value - a.value,
   );
 
-  // ── Recent transactions (last 5) ─────────────────────────────────
-  const recent = allTxns.slice(0, 5);
+  // ── Due recurring transactions ────────────────────────────────────
+  const dueItems = (dueRecurring ?? []).map((r) => ({
+    id: r.id,
+    type: r.type as "income" | "expense",
+    description: r.description,
+    amount: Number(r.amount),
+    next_due_date: r.next_due_date,
+    frequency: r.frequency,
+    category_name: (r.categories as unknown as { name: string } | null)?.name ?? null,
+  }));
+
+  // ── Upcoming bills (later this month) ────────────────────────────
+  const upcomingItems: UpcomingBill[] = (upcomingRecurring ?? []).map((r) => ({
+    id: r.id,
+    type: r.type as "income" | "expense",
+    description: r.description,
+    amount: Number(r.amount),
+    next_due_date: r.next_due_date,
+    category_name: (r.categories as unknown as { name: string } | null)?.name ?? null,
+  }));
+
+  // ── Category spending limits ──────────────────────────────────────
+  const categoryLimitItems = (limitedCats ?? [])
+    .filter((c) => c.monthly_limit != null)
+    .map((c) => {
+      const spent = currentMonthTxns
+        .filter((t) => t.type === "expense" && t.category_id === c.id)
+        .reduce((s, t) => s + Number(t.amount), 0);
+      return { id: c.id, name: c.name, color: c.color, monthly_limit: Number(c.monthly_limit), spent };
+    })
+    .sort((a, b) => b.spent / b.monthly_limit - a.spent / a.monthly_limit);
+
+  // ── Recent transactions (last 5) — shaped for AnimatedTransactionList ───────
+  const recent = allTxns.slice(0, 5).map((txn) => {
+    const cat = txn.categories as unknown as { name: string; color: string | null; icon: string | null } | null;
+    return {
+      id: txn.id,
+      type: txn.type as "income" | "expense",
+      amount: Number(txn.amount),
+      date: txn.date,
+      description: txn.description ?? "",
+      category_id: txn.category_id ?? "",
+      payment_method: (txn as Record<string, unknown>).payment_method as string | null ?? null,
+      category_name: cat?.name ?? null,
+      category_color: cat?.color ?? null,
+      category_icon: cat?.icon ?? null,
+    };
+  });
 
   function delta(current: number, prev: number, lowerIsBetter = false) {
     if (prev === 0) return null;
@@ -160,13 +256,21 @@ export default async function DashboardPage() {
   const currentMonthLabel = `${MONTH_LABELS[thisMonth - 1]} ${thisYear}`;
 
   return (
-    <main className="p-6 md:p-8">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-0.5">{currentMonthLabel}</p>
+    <>
+      {/* Sticky action bar */}
+      <div className="sticky top-14 md:top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-gray-100 px-6 md:px-8 py-3.5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <DynamicGreeting firstName={firstName} />
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <RecurringDialog categories={allCats ?? []} triggerVariant="secondary" />
+            <TransactionDialog categories={allCats ?? []} />
+          </div>
+        </div>
       </div>
 
+    <main className="px-6 md:px-8 pb-8 pt-6">
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 mb-6">
         {summaryCards.map((card) => (
@@ -196,6 +300,9 @@ export default async function DashboardPage() {
         ))}
       </div>
 
+      {/* Quick-add expense form */}
+      <QuickAddForm categories={allCats ?? []} />
+
       {/* Budget progress — always visible */}
       {!profile?.monthly_budget ? (
         <div className="rounded-xl border border-dashed border-gray-200 bg-white px-5 py-4 mb-6 flex items-center justify-between">
@@ -205,24 +312,26 @@ export default async function DashboardPage() {
               Set a limit to track how much you&apos;re spending
             </p>
           </div>
-          <a
-            href="/settings"
-            className="text-xs font-medium text-[#1E6B4E] hover:underline shrink-0 ml-4"
-          >
-            Set budget →
-          </a>
+          <BudgetSetupDialog categories={allCats ?? []} rolloverEnabled={!!profile?.rollover_enabled} />
         </div>
       ) : (() => {
-        const budget = Number(profile.monthly_budget);
+        const baseBudget = Number(profile.monthly_budget);
+        // Rollover: unspent from last month carries forward
+        const rolloverAmount = profile.rollover_enabled
+          ? Math.max(0, baseBudget - prevExpense)
+          : 0;
+        const budget = baseBudget + rolloverAmount;
         const pct = Math.min((monthExpense / budget) * 100, 100);
         const remaining = budget - monthExpense;
         const over = monthExpense > budget;
-        const barColor = over
+        const barColor = over || pct >= 95
           ? "bg-red-500"
-          : pct >= 75
+          : pct >= 80
             ? "bg-amber-500"
             : "bg-[#1E6B4E]";
-        const textColor = over ? "text-red-600" : pct >= 75 ? "text-amber-600" : "text-[#1E6B4E]";
+        const textColor = over || pct >= 95 ? "text-red-600" : pct >= 80 ? "text-amber-600" : "text-[#1E6B4E]";
+        // Safe-to-spend: remaining budget ÷ days left in month (includes today)
+        const safeToSpend = !over && remaining > 0 ? Math.floor(remaining / daysRemaining) : 0;
 
         return (
           <div className="rounded-xl border border-gray-100 bg-white px-5 py-4 mb-6">
@@ -231,6 +340,12 @@ export default async function DashboardPage() {
                 <span className="text-sm font-semibold text-gray-900">
                   Monthly budget
                 </span>
+                <BudgetSetupDialog currentBudget={baseBudget} rolloverEnabled={!!profile.rollover_enabled} categories={allCats ?? []} />
+                {rolloverAmount > 0 && (
+                  <span className="text-xs font-medium text-[#1E6B4E] tabular-nums">
+                    +{formatINR(rolloverAmount)} rollover
+                  </span>
+                )}
                 <span className={`text-xs font-medium tabular-nums ${textColor}`}>
                   {pct.toFixed(0)}% used
                 </span>
@@ -246,34 +361,50 @@ export default async function DashboardPage() {
                 style={{ width: `${pct}%` }}
               />
             </div>
-            <p className={`mt-1.5 text-xs tabular-nums ${over ? "text-red-600 font-medium" : "text-gray-400"}`}>
-              {over
-                ? `${formatINR(monthExpense - budget)} over budget`
-                : `${formatINR(remaining)} remaining`}
-            </p>
+            {/* Remaining + safe-to-spend pill */}
+            <div className="mt-1.5 flex items-center justify-between gap-3">
+              <p className={`text-xs tabular-nums ${over ? "text-red-600 font-medium" : "text-gray-400"}`}>
+                {over
+                  ? `${formatINR(monthExpense - budget)} over budget`
+                  : `${formatINR(remaining)} remaining`}
+              </p>
+              {safeToSpend > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#1E6B4E]/8 px-2.5 py-0.5 text-xs font-semibold text-[#1E6B4E] tabular-nums shrink-0">
+                  Safe to spend today: {formatINR(safeToSpend)}
+                </span>
+              )}
+            </div>
           </div>
         );
       })()}
 
+      {/* Due recurring transactions */}
+      <DueRecurringCard items={dueItems} />
+
+      {/* Category spending limits */}
+      <CategoryLimits items={categoryLimitItems} />
+
       {/* Charts row */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 mb-6">
-        {/* Monthly trend — 2/3 width on large screens */}
-        <div className="lg:col-span-2 rounded-2xl border border-gray-100 bg-white p-5">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">
-            Monthly trend
-          </h2>
-          <MonthlyBarChart data={monthlyData} />
+        {/* Weekly / Monthly trend toggle — 2/3 width on large screens */}
+        <div className="lg:col-span-2">
+          <TrendChartCard data={monthlyData} />
         </div>
 
-        {/* Category breakdown — 1/3 width */}
-        <div className="rounded-2xl border border-gray-100 bg-white p-5">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">
-            Expenses by category
-            <span className="ml-1.5 text-xs font-normal text-gray-400">
-              ({currentMonthLabel})
-            </span>
-          </h2>
-          <CategoryPieChart data={categoryData} />
+        {/* Right column — Category donut stacked above Upcoming Bills */}
+        <div className="flex flex-col gap-4">
+          <div className="rounded-2xl border border-gray-100 bg-white p-5">
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">
+              Expenses by category
+              <span className="ml-1.5 text-xs font-normal text-gray-400">
+                ({currentMonthLabel})
+              </span>
+            </h2>
+            <CategoryPieChart data={categoryData} />
+          </div>
+
+          {/* Upcoming bills — only rendered when there are items */}
+          <UpcomingBillsCard items={upcomingItems} />
         </div>
       </div>
 
@@ -290,64 +421,12 @@ export default async function DashboardPage() {
             View all <ArrowRight className="size-3" />
           </Link>
         </div>
-
-        {recent.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-1 text-center">
-            <svg className="w-8 h-8 text-gray-200 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0c1.1.128 1.907 1.077 1.907 2.185z" />
-            </svg>
-            <p className="text-sm font-medium text-gray-400">Nothing here yet</p>
-            <p className="text-xs text-gray-300">Your recent transactions will appear here</p>
-          </div>
-        ) : (
-          <ul className="divide-y divide-gray-50">
-            {recent.map((txn) => {
-              const cat = txn.categories as unknown as
-                | { name: string; color: string | null }
-                | null;
-              const isIncome = txn.type === "income";
-              return (
-                <li
-                  key={txn.date + txn.description}
-                  className="flex items-stretch overflow-hidden"
-                >
-                  {/* Left color stripe */}
-                  <div className={`w-[3px] shrink-0 ${isIncome ? "bg-green-400" : "bg-red-400"}`} />
-                  <div className="flex flex-1 items-center gap-4 px-5 py-3.5">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">
-                        {txn.description}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {cat && (
-                          <span
-                            className="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium"
-                            style={{
-                              backgroundColor: cat.color ? `${cat.color}18` : "#f3f4f6",
-                              color: cat.color ?? "#6b7280",
-                            }}
-                          >
-                            {cat.name}
-                          </span>
-                        )}
-                        <span className="text-xs text-gray-400">
-                          {new Date(txn.date + "T00:00:00").toLocaleDateString("en-IN", {
-                            day: "numeric",
-                            month: "short",
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                    <span className={`text-base font-bold tabular-nums shrink-0 ${isIncome ? "text-green-600" : "text-gray-800"}`}>
-                      {isIncome ? "+" : "−"}{formatINR(txn.amount)}
-                    </span>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <AnimatedTransactionList
+          transactions={recent}
+          categories={allCats ?? []}
+        />
       </div>
     </main>
+    </>
   );
 }

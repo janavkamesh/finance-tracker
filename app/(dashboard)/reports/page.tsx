@@ -122,12 +122,33 @@ export default async function ReportsPage({
         ))}
       </div>
 
-      {/* Area chart */}
-      <div className="rounded-2xl border border-gray-100 bg-white p-5 mb-5">
-        <h2 className="text-sm font-semibold text-gray-900 mb-4">
-          Income vs Expenses — {year}
-        </h2>
-        <AreaTrendChart data={chartData} />
+      {/* Dual charts — Income + Expenses side by side */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 mb-5">
+        <div className="rounded-2xl border border-gray-100 bg-white p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="h-2.5 w-2.5 rounded-full bg-green-500 shrink-0" />
+            <h2 className="text-sm font-semibold text-gray-900">
+              Income — {year}
+            </h2>
+            <span className="ml-auto text-sm font-bold text-green-600 tabular-nums">
+              {formatINR(annualIncome)}
+            </span>
+          </div>
+          <AreaTrendChart data={chartData} type="income" />
+        </div>
+
+        <div className="rounded-2xl border border-gray-100 bg-white p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="h-2.5 w-2.5 rounded-full bg-red-500 shrink-0" />
+            <h2 className="text-sm font-semibold text-gray-900">
+              Expenses — {year}
+            </h2>
+            <span className="ml-auto text-sm font-bold text-red-600 tabular-nums">
+              {formatINR(annualExpense)}
+            </span>
+          </div>
+          <AreaTrendChart data={chartData} type="expense" />
+        </div>
       </div>
 
       {/* Bottom two-column section */}

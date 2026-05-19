@@ -18,12 +18,41 @@ export async function updateBudget(formData: FormData) {
   const monthlyBudget =
     parsed.data.monthly_budget === 0 ? null : parsed.data.monthly_budget;
 
+  const rolloverEnabled = formData.get("rollover_enabled") === "true";
+
   const { error } = await supabase
     .from("profiles")
-    .update({ monthly_budget: monthlyBudget, updated_at: new Date().toISOString() })
+    .update({
+      monthly_budget: monthlyBudget,
+      rollover_enabled: rolloverEnabled,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", user.id);
 
   if (error) return { error: error.message };
   revalidatePath("/settings");
   revalidatePath("/dashboard");
+}
+
+export async function saveCategoryLimits(
+  updates: { categoryId: string; limit: number | null }[]
+): Promise<{ error?: string }> {
+  if (updates.length === 0) return {};
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  for (const { categoryId, limit } of updates) {
+    await supabase
+      .from("categories")
+      .update({ monthly_limit: limit })
+      .eq("id", categoryId);
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/settings");
+  return {};
 }

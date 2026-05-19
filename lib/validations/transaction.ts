@@ -11,6 +11,9 @@ export const transactionSchema = z.object({
   date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date"),
+  payment_method: z
+    .enum(["cash", "upi", "card", "net_banking", "wallet"])
+    .optional(),
 });
 
 export type TransactionInput = z.infer<typeof transactionSchema>;

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__e0af6419-9e69-49e7-a3e5-d9fc2d722756__get_project_url",
+      "mcp__757975c9-e528-4e4e-90c4-bdf1414d6695__deploy_to_vercel",
+      "Bash(vercel deploy *)",
+      "mcp__e0af6419-9e69-49e7-a3e5-d9fc2d722756__list_projects",
+      "mcp__e0af6419-9e69-49e7-a3e5-d9fc2d722756__apply_migration",
+      "Bash(Test-Path \"C:\\\\Micro Saas\\\\FinanceTrackerWebsite\\\\actions\\\\categories.ts\")",
+      "Bash(npx tsc *)"
+    ]
+  }
+}

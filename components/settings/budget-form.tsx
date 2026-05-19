@@ -25,7 +25,7 @@ export function BudgetForm({ current }: { current: number | null }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex items-end gap-3">
-      <div className="flex-1 max-w-xs">
+      <div className="flex-1 max-w-sm">
         <label
           htmlFor="monthly_budget"
           className="block text-sm font-medium text-gray-700 mb-1.5"

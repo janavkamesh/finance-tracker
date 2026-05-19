@@ -26,6 +26,7 @@ interface Category {
   name: string;
   type: "income" | "expense" | "both";
   color: string | null;
+  monthly_limit: number | null;
 }
 
 interface Props {
@@ -34,6 +35,9 @@ interface Props {
 
 export function CategoryDialog({ category }: Props) {
   const [open, setOpen] = useState(false);
+  const [monthlyLimit, setMonthlyLimit] = useState(
+    category?.monthly_limit != null ? String(category.monthly_limit) : ""
+  );
   const isEdit = !!category;
 
   const {
@@ -52,6 +56,7 @@ export function CategoryDialog({ category }: Props) {
   useEffect(() => {
     if (open && !isEdit) {
       reset({ name: "", type: "expense", color: PALETTE[0] });
+      setMonthlyLimit("");
     }
   }, [open, isEdit, reset]);
 
@@ -60,6 +65,7 @@ export function CategoryDialog({ category }: Props) {
     fd.set("name", data.name);
     fd.set("type", data.type);
     if (data.color) fd.set("color", data.color);
+    fd.set("monthly_limit", monthlyLimit);
 
     const result = isEdit
       ? await updateCategory(category!.id, fd)
@@ -181,6 +187,26 @@ export function CategoryDialog({ category }: Props) {
                   </div>
                 )}
               />
+            </div>
+
+            {/* Monthly limit */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Monthly limit (₹){" "}
+                <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">₹</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="e.g. 8000"
+                  value={monthlyLimit}
+                  onChange={(e) => setMonthlyLimit(e.target.value)}
+                  className={`${inputClass} pl-7`}
+                />
+              </div>
+              <p className="mt-1 text-xs text-gray-400">Get a warning when this category nears its limit for the month.</p>
             </div>
 
             {/* Actions */}

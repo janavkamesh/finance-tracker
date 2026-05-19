@@ -5,10 +5,12 @@ import { createClient } from "@/lib/supabase/server";
 import { categorySchema } from "@/lib/validations/settings";
 
 export async function addCategory(formData: FormData) {
+  const limitRaw = formData.get("monthly_limit");
   const raw = {
     name: formData.get("name"),
     type: formData.get("type"),
     color: formData.get("color") || undefined,
+    monthly_limit: limitRaw !== "" && limitRaw !== null ? limitRaw : null,
   };
 
   const parsed = categorySchema.safeParse(raw);
@@ -31,10 +33,12 @@ export async function addCategory(formData: FormData) {
 }
 
 export async function updateCategory(id: string, formData: FormData) {
+  const limitRaw = formData.get("monthly_limit");
   const raw = {
     name: formData.get("name"),
     type: formData.get("type"),
     color: formData.get("color") || undefined,
+    monthly_limit: limitRaw !== "" && limitRaw !== null ? limitRaw : null,
   };
 
   const parsed = categorySchema.safeParse(raw);
@@ -79,4 +83,37 @@ export async function deleteCategory(id: string) {
   }
   revalidatePath("/settings");
   revalidatePath("/transactions");
+}
+
+export async function createCategory({
+  name,
+  color,
+  icon,
+}: {
+  name: string;
+  color: string;
+  icon: string;
+}): Promise<{
+  data?: { id: string; name: string; type: string; color: string; icon: string };
+  error?: string;
+}> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { data, error } = await supabase
+    .from("categories")
+    .insert({ name: name.trim(), color, icon, type: "both", user_id: user.id, is_system: false })
+    .select("id, name, type, color, icon")
+    .single();
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/transactions");
+  revalidatePath("/dashboard");
+  revalidatePath("/settings");
+
+  return { data };
 }

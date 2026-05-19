@@ -32,7 +32,7 @@ export function ProfileForm({ fullName }: { fullName: string }) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-      <div className="max-w-xs">
+      <div className="max-w-sm">
         <label
           htmlFor="full_name"
           className="block text-sm font-medium text-gray-700 mb-1.5"
