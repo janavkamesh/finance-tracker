@@ -34,7 +34,14 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
           {children}
-          <Toaster richColors position="top-right" />
+          <Toaster
+            richColors
+            position="bottom-right"
+            offset={24}
+            toastOptions={{
+              style: { zIndex: 9999 },
+            }}
+          />
         </ThemeProvider>
       </body>
     </html>

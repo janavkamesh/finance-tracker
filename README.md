@@ -17,7 +17,7 @@ Personal finance tracker for Indian working professionals. Built with Next.js 16
 | UI primitives | shadcn/ui (base-nova) | Re-exported in `components/ui/` |
 | Forms | react-hook-form + Zod | `valueAsNumber` on amount inputs; Zod v4 `.issues` not `.errors` |
 | Charts | Recharts v3 | Client components only; null-guard on `formatter` |
-| Notifications | Sonner | `<Toaster richColors position="top-right" />` in root layout |
+| Notifications | Sonner | `<Toaster richColors position="bottom-right" offset={24} />` in root layout |
 | Icons | lucide-react | |
 | Deployment | Vercel | Auto-deploy from GitHub `main` branch |
 
@@ -1839,3 +1839,14 @@ Replaced `<select>` for category in the transaction dialog and recurring dialog 
 | `components/transactions/transaction-dialog.tsx` | `Category` interface + `user_id`/`created_at`; passes `transactionType` to picker |
 | `app/(dashboard)/dashboard/page.tsx` | Categories query adds `user_id, created_at` |
 | `app/(dashboard)/transactions/page.tsx` | Categories query adds `user_id, created_at` |
+
+---
+
+## Phase 53 — Toast Repositioning (Bottom-Right)
+
+**Problem:** `<Toaster position="top-right" />` anchored notifications directly over the "Add Transaction" primary CTA in the top-right header, blocking rapid multi-entry workflows.
+
+**Fix (`app/layout.tsx`):**
+- `position` changed from `"top-right"` → `"bottom-right"` — away from all primary action areas
+- `offset={24}` — explicit 24 px clearance from both bottom and right viewport edges (Sonner's shorthand applies the value to both axes simultaneously)
+- `toastOptions.style.zIndex: 9999` — belt-and-suspenders above any Tailwind reset that could clobber Sonner's own `--z-index` CSS variable; sits above the mobile bottom nav (`z-50`) and sidebar elements
