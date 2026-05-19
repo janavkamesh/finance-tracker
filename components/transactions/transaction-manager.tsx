@@ -46,6 +46,7 @@ interface Props {
   initialTransactions: TxnRow[];
   categories: CategoryItem[];
   activeMonth?: string;
+  emptyMessage?: string;
   filters?: {
     search: string;
     typeFilter: string;
@@ -75,7 +76,7 @@ const TYPE_TABS = [
   { value: "expense", label: "Expense" },
 ] as const;
 
-export function TransactionManager({ initialTransactions, categories, activeMonth, filters }: Props) {
+export function TransactionManager({ initialTransactions, categories, activeMonth, emptyMessage, filters }: Props) {
   // ── Selection state ───────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
@@ -210,7 +211,11 @@ export function TransactionManager({ initialTransactions, categories, activeMont
       if (liveCategory && t.category_id !== liveCategory) return false;
       if (periodRange.start && t.date < periodRange.start) return false;
       if (periodRange.end && t.date > periodRange.end) return false;
-      if (liveSearch && !(t.description ?? "").toLowerCase().includes(liveSearch)) return false;
+      if (liveSearch) {
+        const inDesc = (t.description ?? "").toLowerCase().includes(liveSearch);
+        const inCat  = (t.category_name ?? "").toLowerCase().includes(liveSearch);
+        if (!inDesc && !inCat) return false;
+      }
       return true;
     });
   }, [transactions, liveCategory, periodRange, liveSearch]);
@@ -408,15 +413,39 @@ export function TransactionManager({ initialTransactions, categories, activeMont
         </div>
       )}
 
-      {/* ── Empty state for current tab ────────────────────────────── */}
-      {displayedTransactions.length === 0 && transactions.length > 0 && (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white py-12 text-center px-6">
-          <p className="text-sm font-medium text-gray-700">
-            No {typeTab} transactions in this period
-          </p>
-          <p className="text-xs text-gray-400 mt-1">
-            Switch to &quot;All&quot; to see all transactions, or add one now.
-          </p>
+      {/* ── Empty state ────────────────────────────────────────────── */}
+      {displayedTransactions.length === 0 && (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white py-16 text-center px-6">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 mb-4">
+            <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0c1.1.128 1.907 1.077 1.907 2.185z" />
+            </svg>
+          </div>
+          {transactions.length > 0 ? (
+            <>
+              <p className="text-sm font-medium text-gray-700">
+                No {typeTab} transactions in this period
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                Switch to &quot;All&quot; to see all transactions, or add one now.
+              </p>
+            </>
+          ) : (liveSearch || liveCategory) ? (
+            <>
+              <p className="text-sm font-medium text-gray-900">
+                {emptyMessage ?? "No transactions match your current filters."}
+              </p>
+              <p className="text-sm text-gray-500 mt-1">Try adjusting or clearing the filters above.</p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-gray-900">Nothing here yet</p>
+              <p className="text-sm text-gray-500 mt-1 mb-5">
+                Track your first income or expense to see it here.
+              </p>
+              <TransactionDialog categories={categories} activeMonth={activeMonth} />
+            </>
+          )}
         </div>
       )}
 

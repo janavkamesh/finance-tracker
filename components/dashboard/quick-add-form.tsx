@@ -49,8 +49,8 @@ export function QuickAddForm({ categories }: Props) {
   ];
 
   const [amount, setAmount] = useState("");
-  const [categoryId, setCategoryId] = useState(expenseCats[0]?.id ?? "");
-  const [paymentMethod, setPaymentMethod] = useState<string>("upi");
+  const [categoryId, setCategoryId] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [description, setDescription] = useState("");
   const amountRef = useRef<HTMLInputElement>(null);
 
@@ -145,30 +145,22 @@ export function QuickAddForm({ categories }: Props) {
           </div>
 
           {/* Category */}
-          <div className="flex flex-col gap-0.5">
-            <label className="px-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-              Category
-            </label>
-            <CustomSelect
-              options={categoryOptions}
-              value={categoryId}
-              onChange={setCategoryId}
-              className="w-full sm:w-40 [&>button]:bg-gray-50"
-            />
-          </div>
+          <CustomSelect
+            options={categoryOptions}
+            value={categoryId}
+            onChange={setCategoryId}
+            placeholder="Category"
+            className="w-full sm:w-40 [&>button]:bg-gray-50"
+          />
 
           {/* Payment method */}
-          <div className="flex flex-col gap-0.5">
-            <label className="px-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-              Payment Method
-            </label>
-            <CustomSelect
-              options={paymentOptions}
-              value={paymentMethod}
-              onChange={setPaymentMethod}
-              className="w-full sm:w-36 [&>button]:bg-gray-50"
-            />
-          </div>
+          <CustomSelect
+            options={paymentOptions}
+            value={paymentMethod}
+            onChange={setPaymentMethod}
+            placeholder="Payment Method"
+            className="w-full sm:w-36 [&>button]:bg-gray-50"
+          />
 
           {/* Description */}
           <input
@@ -190,7 +182,7 @@ export function QuickAddForm({ categories }: Props) {
               "+ Add Transaction" button so the eye lands there first. */}
           <button
             type="submit"
-            disabled={!amount.trim()}
+            disabled={!amount.trim() || !categoryId}
             className={cn(
               "h-9 shrink-0 rounded-lg border border-[#1E6B4E]/25 bg-white px-5 text-sm font-semibold text-[#1E6B4E] shadow-sm",
               "transition-all hover:border-[#1E6B4E]/50 hover:bg-[#1E6B4E]/5 active:scale-[0.98]",

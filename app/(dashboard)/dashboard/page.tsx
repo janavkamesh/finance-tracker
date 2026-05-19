@@ -279,7 +279,7 @@ export default async function DashboardPage() {
     <>
       {/* Sticky action bar — h-16 matches the sidebar's logo section so the
           bottom borders line up flush across the sidebar/main seam. */}
-      <div className="sticky top-14 md:top-0 z-10 bg-white border-b border-gray-100 h-16 px-6 md:px-8 flex items-center justify-between gap-4">
+      <div className="sticky top-14 md:top-0 z-10 bg-white border-b border-gray-100 h-[88px] px-6 md:px-8 flex items-center justify-between gap-4">
         <div className="flex-1 min-w-0">
           <DynamicGreeting firstName={firstName} />
         </div>
@@ -295,20 +295,22 @@ export default async function DashboardPage() {
         {summaryCards.map((card) => (
           <div
             key={card.label}
-            className="rounded-xl border border-gray-100 bg-white p-4"
+            className="rounded-xl border border-gray-100 bg-white px-4 py-1"
           >
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-1.5">
               <span className={`h-2 w-2 rounded-full ${card.dot}`} />
               <span className="text-xs text-gray-500">{card.label}</span>
             </div>
-            <p className={`text-lg font-bold tabular-nums ${card.color}`}>
-              {card.value}
-            </p>
-            {card.delta && (
-              <p className="mt-1 text-xs font-medium tabular-nums truncate text-gray-400">
-                {card.delta.up ? "↑" : "↓"} {card.delta.label}
+            <div className="flex items-baseline gap-2">
+              <p className={`text-lg font-bold tabular-nums ${card.color}`}>
+                {card.value}
               </p>
-            )}
+              {card.delta && (
+                <span className="text-[11px] font-medium tabular-nums text-gray-400 truncate">
+                  {card.delta.up ? "↑" : "↓"} {card.delta.label}
+                </span>
+              )}
+            </div>
           </div>
         ))}
       </div>

@@ -11,7 +11,7 @@ export function Sidebar({ fullName, userInitials }: SidebarProps) {
   return (
     <aside className="flex h-screen w-60 shrink-0 flex-col border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 sticky top-0">
       {/* Brand */}
-      <div className="flex h-16 items-center gap-2.5 border-b border-gray-100 dark:border-gray-800 px-4">
+      <div className="flex h-[88px] items-center gap-2.5 border-b border-gray-100 dark:border-gray-800 px-4">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1E6B4E]">
           <svg
             className="h-4 w-4 text-white"
