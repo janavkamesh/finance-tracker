@@ -68,15 +68,15 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
     }
   }, []);
 
-  // Fetch current month on open / month change
+  // Fetch current month on open / month change (or immediately when inline)
   useEffect(() => {
-    if (!open) return;
+    if (!open && !inline) return;
     fetchMonth(year, month);
-  }, [open, year, month, fetchMonth]);
+  }, [open, inline, year, month, fetchMonth]);
 
   // Silently prefetch adjacent months so navigation feels instant
   useEffect(() => {
-    if (!open) return;
+    if (!open && !inline) return;
     const prevM = month === 1 ? 12 : month - 1;
     const prevY = month === 1 ? year - 1 : year;
     fetchMonth(prevY, prevM, false);
@@ -87,7 +87,7 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
       const nextY = month === 12 ? year + 1 : year;
       fetchMonth(nextY, nextM, false);
     }
-  }, [open, year, month, fetchMonth]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, inline, year, month, fetchMonth]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleDayClick(day: number) {
     const dateKey = `${year}-${pad(month)}-${pad(day)}`;
@@ -373,7 +373,7 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
                       isToday
                         ? "ring-2 ring-[#1E6B4E]"
                         : hasBoth
-                          ? "bg-blue-50 hover:bg-blue-100"
+                          ? "bg-gradient-to-b from-green-50 to-red-50 hover:from-green-100 hover:to-red-100"
                           : hasExpense
                             ? "bg-red-50 hover:bg-red-100"
                             : hasIncome
@@ -395,22 +395,14 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
                     >
                       {day}
                     </span>
-                    {info && (net !== 0 || info.expense > 0) && (
-                      <span
-                        className={cn(
-                          "text-[9px] font-bold leading-none mt-0.5 tabular-nums",
-                          hasBoth
-                            ? "text-blue-600"
-                            : hasExpense
-                              ? "text-red-500"
-                              : "text-green-600"
-                        )}
-                      >
-                        {hasBoth
-                          ? `${formatCompact(net < 0 ? info.expense : net)}`
-                          : hasExpense
-                            ? `-${formatCompact(info.expense)}`
-                            : `+${formatCompact(info.income)}`}
+                    {hasIncome && (
+                      <span className="text-[9px] font-bold leading-none mt-0.5 tabular-nums text-green-600">
+                        +{formatCompact(info!.income)}
+                      </span>
+                    )}
+                    {hasExpense && (
+                      <span className="text-[9px] font-bold leading-none mt-0.5 tabular-nums text-red-500">
+                        -{formatCompact(info!.expense)}
                       </span>
                     )}
                   </div>
@@ -421,16 +413,12 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
         {/* Legend */}
         <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t border-gray-100">
           <div className="flex items-center gap-1.5">
-            <div className="h-2.5 w-2.5 rounded bg-red-100 border border-red-200" />
-            <span className="text-[10px] text-gray-500">Expense</span>
-          </div>
-          <div className="flex items-center gap-1.5">
             <div className="h-2.5 w-2.5 rounded bg-green-100 border border-green-200" />
             <span className="text-[10px] text-gray-500">Income</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="h-2.5 w-2.5 rounded bg-blue-100 border border-blue-200" />
-            <span className="text-[10px] text-gray-500">Both</span>
+            <div className="h-2.5 w-2.5 rounded bg-red-100 border border-red-200" />
+            <span className="text-[10px] text-gray-500">Expense</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="h-2.5 w-2.5 rounded border-2 border-[#1E6B4E]" />

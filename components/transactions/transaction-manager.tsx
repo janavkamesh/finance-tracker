@@ -7,6 +7,7 @@ import { TransactionFilters } from "./transaction-filters";
 import { TransactionDialog } from "./transaction-dialog";
 import { DeleteTransactionButton } from "./delete-transaction-button";
 import { BulkActionsBar } from "./bulk-actions-bar";
+import { TransactionCalendar } from "./transaction-calendar";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { formatINR, cn } from "@/lib/utils";
 import { fetchTransactionsBatch } from "@/app/actions/transactions";
@@ -395,17 +396,9 @@ export function TransactionManager({ initialTransactions, categories, activeMont
         </div>
       )}
 
-      {/* ── Calendar view placeholder (UI prepared for future) ──────── */}
-      {viewMode === "calendar" && displayedTransactions.length > 0 && (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white py-16 text-center px-6">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1E6B4E]/10 mb-4">
-            <CalendarDays className="h-6 w-6 text-[#1E6B4E]" />
-          </div>
-          <p className="text-sm font-semibold text-gray-900">Calendar view coming soon</p>
-          <p className="text-xs text-gray-500 mt-1 max-w-sm">
-            A full-page calendar with daily totals and drill-down is on the way. Switch back to List to continue managing transactions.
-          </p>
-        </div>
+      {/* ── Interactive calendar view ───────────────────────────────── */}
+      {viewMode === "calendar" && (
+        <TransactionCalendar inline />
       )}
 
       {/* ── Empty state for current tab ────────────────────────────── */}

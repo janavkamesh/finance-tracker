@@ -92,19 +92,24 @@ function getPreviousDateRange(period: string): { start: string; end?: string } |
   return null;
 }
 
+function formatShorthand(n: number): string {
+  const abs = Math.abs(n);
+  if (abs >= 100_000) return `₹${(abs / 100_000).toFixed(1)}L`;
+  if (abs >= 1_000) return `₹${(abs / 1_000).toFixed(1)}K`;
+  return `₹${Math.round(abs)}`;
+}
+
 function DeltaBadge({ current, previous }: { current: number; previous: number; type?: "income" | "expense" | "net" }) {
   if (previous === 0) return null;
-  const delta = ((current - previous) / Math.abs(previous)) * 100;
+  const delta = current - previous;
   if (delta === 0) return null;
 
   const icon = delta > 0 ? "↑" : "↓";
 
   return (
-    <div className="mt-1">
-      <span className="text-xs font-medium text-gray-400 tabular-nums">
-        {icon} {Math.abs(delta).toFixed(0)}%
-      </span>
-    </div>
+    <span className="text-[11px] font-medium text-gray-400 tabular-nums">
+      {icon} {formatShorthand(delta)}
+    </span>
   );
 }
 
@@ -215,37 +220,46 @@ export default async function TransactionsPage({
         <div className="min-w-0">
           {/* Summary stats */}
       <div className="grid grid-cols-3 gap-3 mb-5">
-        <div className="rounded-xl border border-gray-100 bg-white px-4 py-3 flex flex-col justify-between">
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Income</p>
+        {/* Income */}
+        <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500 shrink-0" />
+            <p className="text-xs text-gray-500">Income</p>
+          </div>
+          <div className="flex items-baseline gap-2 flex-wrap">
             <p className="text-base font-semibold text-green-600 tabular-nums">
               {formatINR(totalIncome)}
             </p>
+            <DeltaBadge current={totalIncome} previous={prevIncome} type="income" />
           </div>
-          <DeltaBadge current={totalIncome} previous={prevIncome} type="income" />
         </div>
-        <div className="rounded-xl border border-gray-100 bg-white px-4 py-3 flex flex-col justify-between">
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Expenses</p>
+
+        {/* Expenses */}
+        <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
+            <p className="text-xs text-gray-500">Expenses</p>
+          </div>
+          <div className="flex items-baseline gap-2 flex-wrap">
             <p className="text-base font-semibold text-red-600 tabular-nums">
               {formatINR(totalExpense)}
             </p>
+            <DeltaBadge current={totalExpense} previous={prevExpense} type="expense" />
           </div>
-          <DeltaBadge current={totalExpense} previous={prevExpense} type="expense" />
         </div>
-        <div className="rounded-xl border border-gray-100 bg-white px-4 py-3 flex flex-col justify-between">
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Net</p>
-            <p
-              className={`text-base font-semibold tabular-nums ${
-                net >= 0 ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              {net >= 0 ? "+" : ""}
-              {formatINR(net)}
-            </p>
+
+        {/* Net Savings */}
+        <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${net >= 0 ? "bg-green-500" : "bg-red-500"}`} />
+            <p className="text-xs text-gray-500">Net Savings</p>
           </div>
-          <DeltaBadge current={net} previous={prevNet} type="net" />
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <p className={`text-base font-semibold tabular-nums ${net >= 0 ? "text-green-600" : "text-red-600"}`}>
+              {net >= 0 ? "+" : ""}{formatINR(net)}
+            </p>
+            <DeltaBadge current={net} previous={prevNet} type="net" />
+          </div>
         </div>
       </div>
 
