@@ -1983,3 +1983,31 @@ Resolved multiple critical TypeScript errors in `transaction-manager.tsx`, `date
 - **Type Safety Restoration**: Restored the accidentally omitted `category_name` property to the `TxnRow` interface to fix dynamic data mapping compilation failures.
 - **Base UI Integration**: Refactored the popover trigger in `date-picker.tsx` to utilize Base UI's native `render` composition property, bypassing unsupported Radix-style `asChild` props.
 - **Day Picker v10 API Compatibility**: Cleaned up the Shadcn Calendar integration by mapping custom table overrides to the new `month_grid` classNames key and removing deprecated `initialFocus` flags.
+
+---
+
+## Phase 62 — Monthly Budget Card Layout & Category Breakdown Modal
+
+### Feature
+Overhauled the `BudgetWidget` (`components/dashboard/budget-widget.tsx`) to declutter the Monthly Budget card and promote the Category Breakdown from a cramped popover into a centered modal dialog.
+
+### UX Design & Changes
+- **Left/Right Split**: Card is now a two-column flex layout. The left column holds the title, edit affordance, rollover badge, `% used`, the progress bar, and a single muted secondary row beneath the bar containing `spent of total · remaining · safe to spend today`. The right column is reserved exclusively for the action button, separated by a thin vertical border (`border-l border-gray-100`).
+- **Isolated Vertical-Center Button**: Replaced the dropdown-style toggle with a standalone `Category Breakdown` button (`LayoutList` icon, no chevron) that is `items-center` aligned and sits alone on the far right of the card, eliminating the prior floating-text clutter that suffocated the trigger.
+- **Centered Modal**: Replaced the in-card popover with a Base UI `Dialog` (`components/ui/dialog.tsx`) — backdrop dimmed at `bg-black/40` with `backdrop-blur-sm`, spacious `sm:max-w-lg` content, titled "Category Budget Breakdown" with a subtitle, generous `px-6 py-5` padding, larger 7×7 category icon tiles, and a built-in `X` close button. Dismissable via the close button or backdrop click.
+- **Visual Hierarchy**: Primary data (title, bar, %) reads first; secondary numbers collapse into a single muted dot-separated line; the action sits as a clear, isolated affordance — restoring breathing room and a clean horizontal flow.
+
+---
+
+## Phase 63 — Transactions Filter Performance: No-Flash Background Syncing
+
+### Feature
+Eliminated the disruptive route-level skeleton flash that fired on every Month / Category / Search filter change on the Transactions page, replacing it with instant client-side narrowing + silent background server sync.
+
+### UX Design & Changes
+- **`useTransition` Wrapper (`components/transactions/transaction-filters.tsx`)**: All filter navigations (`router.replace` for period, category, search, and Clear) now run inside React's `startTransition`. Next.js App Router skips the route segment's `loading.tsx` Suspense fallback during transitions, so the current transaction rows stay rendered until the new server payload arrives — no more skeleton flash on every dropdown click.
+- **Live URL → Client-Filter Bridge (`components/transactions/transaction-manager.tsx`)**: `TransactionManager` now reads `useSearchParams()` directly and applies the active `category`, `period` (with on-the-fly date-range computation for `this_month` / `last_month` / `3_months` / `all`), and `search` filters to the already-loaded `transactions` array via a memoised `clientFiltered` set. Narrowing within loaded data resolves in 0 ms; the server fetch then quietly replaces the set with the canonical payload.
+- **Optimistic Row Protection**: Pending writes (rows with `opt-…` IDs) bypass the client-side filter, so an in-flight Add Transaction never blinks out mid-save when the URL filters change.
+- **Non-Blocking Sync Indicator**: Added a subtle "Syncing…" pill with a small spinning ring next to the filters while `isPending`, plus a faint `opacity-90` cue on the filter row — the user gets feedback that data is refreshing without losing their place in the list.
+- **Tab Counts Track Live Filters**: Income / Expense tab badges now derive from the client-filtered set, so the counts stay coherent with whatever category / period the user just selected — no stale numbers while the server is mid-flight.
+- **Scroll Position Preserved**: `router.replace(..., { scroll: false })` keeps the user pinned to their current viewport on every filter change.

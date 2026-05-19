@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Download, MoreVertical, Search, X } from "lucide-react";
@@ -45,6 +45,11 @@ export function TransactionFilters({
   const [exportOpen, setExportOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // useTransition keeps the previous UI visible while the new server data
+  // streams in — Next.js skips the route's loading.tsx skeleton when the
+  // navigation runs inside startTransition.
+  const [isPending, startTransition] = useTransition();
+
   // Close kebab menu on outside click
   useEffect(() => {
     if (!menuOpen) return;
@@ -69,7 +74,9 @@ export function TransactionFilters({
       } else {
         next.set(key, value);
       }
-      router.replace(`${pathname}?${next.toString()}`);
+      startTransition(() => {
+        router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+      });
     },
     [params, pathname, router],
   );
@@ -109,11 +116,19 @@ export function TransactionFilters({
 
   function clearAll() {
     setSearchValue("");
-    router.replace(pathname);
+    startTransition(() => {
+      router.replace(pathname, { scroll: false });
+    });
   }
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+    <div
+      className={cn(
+        "flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap transition-opacity",
+        isPending && "opacity-90",
+      )}
+      data-pending={isPending ? "true" : undefined}
+    >
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-gray-400 pointer-events-none" />
@@ -189,6 +204,18 @@ export function TransactionFilters({
           <X className="size-3.5" />
           Clear
         </button>
+      )}
+
+      {/* Background sync indicator — non-blocking, replaces the old skeleton flash */}
+      {isPending && (
+        <span
+          className="flex items-center gap-1.5 text-xs text-gray-400"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="inline-block size-3 rounded-full border-2 border-gray-300 border-t-[#1E6B4E] animate-spin" />
+          Syncing…
+        </span>
       )}
     </div>
   );
