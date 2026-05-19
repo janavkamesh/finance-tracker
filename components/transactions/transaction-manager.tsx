@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { TransactionFilters } from "./transaction-filters";
 import { TransactionDialog } from "./transaction-dialog";
 import { DeleteTransactionButton } from "./delete-transaction-button";
@@ -154,15 +155,63 @@ export function TransactionManager({ initialTransactions, categories, activeMont
     setTransactions((prev) => prev.filter((t) => t.id !== tempId));
   }, []);
 
+  // ── Live URL params drive instant client-side narrowing ───────────
+  // While the server re-fetches in the background (via useTransition in the
+  // filters component), we apply the new category / period / search filters
+  // to the currently-loaded set so the list updates in 0 ms instead of
+  // waiting on the network round-trip.
+  const searchParams = useSearchParams();
+  const liveCategory = searchParams.get("category") ?? "";
+  const livePeriod   = searchParams.get("period") ?? "this_month";
+  const liveSearch   = (searchParams.get("search") ?? "").trim().toLowerCase();
+
+  // Period → inclusive date range, evaluated on the client for instant filtering.
+  const periodRange = useMemo<{ start?: string; end?: string }>(() => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    if (livePeriod === "this_month") {
+      return {
+        start: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`,
+        end: fmt(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+      };
+    }
+    if (livePeriod === "last_month") {
+      return {
+        start: fmt(new Date(now.getFullYear(), now.getMonth() - 1, 1)),
+        end: fmt(new Date(now.getFullYear(), now.getMonth(), 0)),
+      };
+    }
+    if (livePeriod === "3_months") {
+      return { start: fmt(new Date(now.getFullYear(), now.getMonth() - 2, 1)) };
+    }
+    return {}; // all time
+  }, [livePeriod]);
+
+  // Client-side narrowing applied on top of the already-loaded transactions.
+  // Optimistic rows (pending writes) bypass these filters so they don't
+  // disappear mid-save.
+  const clientFiltered = useMemo(() => {
+    return transactions.filter((t) => {
+      if (t.id.startsWith("opt-")) return true;
+      if (liveCategory && t.category_id !== liveCategory) return false;
+      if (periodRange.start && t.date < periodRange.start) return false;
+      if (periodRange.end && t.date > periodRange.end) return false;
+      if (liveSearch && !(t.description ?? "").toLowerCase().includes(liveSearch)) return false;
+      return true;
+    });
+  }, [transactions, liveCategory, periodRange, liveSearch]);
+
   // ── Client-side type filtering (instant, 0 ms) ────────────────────
   const displayedTransactions = useMemo(
-    () => typeTab === "all" ? transactions : transactions.filter((t) => t.type === typeTab),
-    [transactions, typeTab]
+    () => typeTab === "all" ? clientFiltered : clientFiltered.filter((t) => t.type === typeTab),
+    [clientFiltered, typeTab]
   );
 
-  // Tab counts (computed from full loaded set, not filtered view)
-  const incomeCount  = useMemo(() => transactions.filter((t) => t.type === "income").length,  [transactions]);
-  const expenseCount = useMemo(() => transactions.filter((t) => t.type === "expense").length, [transactions]);
+  // Tab counts (computed from the client-filtered set so they reflect the
+  // current category/period/search context)
+  const incomeCount  = useMemo(() => clientFiltered.filter((t) => t.type === "income").length,  [clientFiltered]);
+  const expenseCount = useMemo(() => clientFiltered.filter((t) => t.type === "expense").length, [clientFiltered]);
 
   // ── Bulk selection ────────────────────────────────────────────────
   const allSelected  = displayedTransactions.length > 0 && selectedIds.size === displayedTransactions.length;
