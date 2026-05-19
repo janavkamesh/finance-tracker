@@ -13,6 +13,7 @@ interface Category {
   type: "income" | "expense" | "both";
   color?: string | null;
   icon?: string | null;
+  user_id?: string | null;
 }
 
 interface Props {
@@ -26,10 +27,16 @@ export function QuickAddForm({ categories }: Props) {
 
   const categoryOptions: SelectOption[] = expenseCats.map((c) => {
     const Icon = getCategoryIcon(c);
+    const isCustom = !!c.user_id;
     return {
       label: c.name,
       value: c.id,
-      icon: <Icon className="size-3.5" style={{ color: c.color ?? "#6b7280" }} />,
+      icon: (
+        <Icon 
+          className={cn("size-3.5", !isCustom && "text-gray-500")} 
+          style={isCustom ? { color: c.color ?? undefined } : undefined} 
+        />
+      ),
     };
   });
 

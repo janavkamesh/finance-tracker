@@ -291,7 +291,7 @@ export function CategoryPicker({
                       className={cn(
                         "group flex items-center gap-3 px-4 py-3 text-sm transition-colors",
                         isSelected && !isConfirming
-                          ? "bg-[#1E6B4E]/5"
+                          ? "bg-gray-50"
                           : isConfirming
                             ? "bg-red-50"
                             : "hover:bg-gray-50",
@@ -301,14 +301,20 @@ export function CategoryPicker({
                       <div
                         className={cn(
                           "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-                          isSelected && !isConfirming ? "bg-[#1E6B4E]/10" : "bg-gray-100"
+                          !isUserCat && isSelected && !isConfirming ? "bg-gray-200" : "bg-gray-100"
                         )}
+                        style={isUserCat && isSelected && !isConfirming ? { backgroundColor: `${cat.color}1A` } : undefined}
                       >
                         <Icon
                           className={cn(
                             "size-4",
-                            isSelected && !isConfirming ? "text-[#1E6B4E]" : "text-gray-500"
+                            !isUserCat && "text-gray-500"
                           )}
+                          style={
+                            isUserCat && !isConfirming
+                              ? { color: cat.color ?? undefined }
+                              : undefined
+                          }
                         />
                       </div>
 
@@ -323,7 +329,7 @@ export function CategoryPicker({
                         className={cn(
                           "flex-1 min-w-0 text-left font-medium truncate",
                           isSelected && !isConfirming
-                            ? "text-[#1E6B4E]"
+                            ? "text-gray-900 font-semibold"
                             : isConfirming
                               ? "text-red-700"
                               : "text-gray-700",
@@ -349,7 +355,7 @@ export function CategoryPicker({
                           )}
                           {/* Checkmark for selected */}
                           {isSelected && (
-                            <Check className="size-4 text-[#1E6B4E] shrink-0" />
+                            <Check className="size-4 text-gray-900 shrink-0" />
                           )}
                           {/* Trash — appears on row hover */}
                           <button
@@ -368,7 +374,7 @@ export function CategoryPicker({
 
                       {/* System category — just show checkmark */}
                       {!isUserCat && isSelected && (
-                        <Check className="size-4 text-[#1E6B4E] shrink-0" />
+                        <Check className="size-4 text-gray-900 shrink-0" />
                       )}
 
                       {/* ── Inline delete confirm ── */}
@@ -552,7 +558,10 @@ export function CategoryPicker({
         )}
       >
         {SelectedIcon && (
-          <SelectedIcon className="size-4 shrink-0 text-[#1E6B4E]" />
+          <SelectedIcon 
+            className={cn("size-4 shrink-0", !selected?.user_id && "text-gray-500")} 
+            style={selected?.user_id ? { color: selected.color ?? undefined } : undefined}
+          />
         )}
         <span className="flex-1 truncate">
           {selected ? selected.name : "Select category"}

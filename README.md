@@ -1910,3 +1910,27 @@ Replaced the native HTML `<select>` element in the Dashboard "Quick add" form wi
 - Replaces harsh default OS blue highlights with the app's custom soft gray hover states.
 - Applies custom background styling (`bg-gray-50`) to the dropdown trigger so it seamlessly aligns with the adjacent "Amount" and "Note" input fields in the inline form.
 - Standardizes component usage across the platform, improving the "premium" feel.
+
+---
+
+## Phase 56 — Transaction Filter Visual Flow Optimization
+
+### Feature
+Reordered the interactive elements in the Transactions filter bar, moving the "Clear" button to appear strictly after the kebab (more actions) menu.
+
+### UX Design & Changes
+- **Visual Hierarchy Fix**: Previously, the contextual "Clear" action sat between the main filters and the utility (CSV Export) menu, breaking the logical grouping of persistent controls.
+- By placing "Clear" at the absolute right boundary of the container, it visually acts as a global reset bound to the entire filter group rather than an inline element.
+- Reduces accidental clicks while accessing the Export menu and reinforces a cleaner, premium UI flow.
+
+---
+
+## Phase 57 — Monochrome Iconography System for Default Categories
+
+### Feature
+Standardized all default system category icons to a premium, minimalist monochrome aesthetic (`text-gray-500`) while preserving user-assigned colors for custom categories.
+
+### UX Design & Changes
+- **Premium SaaS Look**: Stripped hardcoded, multi-colored hex values from system category icons (e.g., Rent, Food, Bills) across the Quick Add dropdown, Transactions filter, and Category popover.
+- **Dynamic Context**: Checks the `user_id` property. System defaults (`null`) render in monochrome. User-created categories (`!== null`) correctly apply and render their specific custom colors via inline styling.
+- **Strict Readability Control**: Ensured that the category text and selection states never inherit the icon colors. Selected categories now render as high-contrast dark neutrals (`text-gray-900 font-semibold`) instead of the brand color, strictly enforcing WCAG readability and visual flow.

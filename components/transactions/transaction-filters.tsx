@@ -14,6 +14,7 @@ interface Category {
   name: string;
   color?: string | null;
   icon?: string | null;
+  user_id?: string | null;
 }
 
 const PERIODS: SelectOption[] = [
@@ -92,10 +93,16 @@ export function TransactionFilters({
     { label: "All categories", value: "all" },
     ...categories.map((c) => {
       const Icon = getCategoryIcon(c);
+      const isCustom = !!c.user_id;
       return {
         label: c.name,
         value: c.id,
-        icon: <Icon className="size-3.5" style={{ color: c.color ?? "#6b7280" }} />,
+        icon: (
+          <Icon 
+            className={cn("size-3.5", !isCustom && "text-gray-500")} 
+            style={isCustom ? { color: c.color ?? undefined } : undefined} 
+          />
+        ),
       };
     }),
   ];
@@ -138,17 +145,6 @@ export function TransactionFilters({
       )}
 
 
-      {/* Clear */}
-      {hasActiveFilters && (
-        <button
-          onClick={clearAll}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors"
-        >
-          <X className="size-3.5" />
-          Clear
-        </button>
-      )}
-
       {/* Kebab actions menu */}
       {showExportMenu && (
         <>
@@ -182,6 +178,17 @@ export function TransactionFilters({
           </div>
           <ExportDialog open={exportOpen} onOpenChange={setExportOpen} />
         </>
+      )}
+
+      {/* Clear */}
+      {hasActiveFilters && (
+        <button
+          onClick={clearAll}
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+        >
+          <X className="size-3.5" />
+          Clear
+        </button>
       )}
     </div>
   );
