@@ -154,6 +154,29 @@ export default async function DashboardPage() {
     (a, b) => b.value - a.value,
   );
 
+  // ── Category donut (current week Sun–Sat expenses) ────────────────
+  const weekSunday = new Date(now);
+  weekSunday.setDate(now.getDate() - now.getDay());
+  const weekSaturday = new Date(weekSunday);
+  weekSaturday.setDate(weekSunday.getDate() + 6);
+  const weekStart = `${weekSunday.getFullYear()}-${pad(weekSunday.getMonth() + 1)}-${pad(weekSunday.getDate())}`;
+  const weekEnd   = `${weekSaturday.getFullYear()}-${pad(weekSaturday.getMonth() + 1)}-${pad(weekSaturday.getDate())}`;
+
+  const weekCatMap = new Map<string, { name: string; value: number; color: string; icon: string | null }>();
+  for (const t of allTxns) {
+    if (t.type !== "expense" || t.date < weekStart || t.date > weekEnd) continue;
+    const cat = t.categories as unknown as { name: string; color: string | null; icon: string | null } | null;
+    const name  = cat?.name  ?? "Uncategorised";
+    const color = cat?.color ?? "#9ca3af";
+    const icon  = cat?.icon  ?? null;
+    const existing = weekCatMap.get(name);
+    if (existing) existing.value += Number(t.amount);
+    else weekCatMap.set(name, { name, value: Number(t.amount), color, icon });
+  }
+  const weeklyCategoryData: CategorySlice[] = Array.from(weekCatMap.values()).sort(
+    (a, b) => b.value - a.value,
+  );
+
   // ── Due recurring transactions ────────────────────────────────────
   const dueItems = (dueRecurring ?? []).map((r) => ({
     id: r.id,
@@ -365,7 +388,7 @@ export default async function DashboardPage() {
 
         {/* Right column — Category donut stacked above Upcoming Bills */}
         <div className="flex flex-col gap-4">
-          <CategoryPieChart data={categoryData} />
+          <CategoryPieChart data={categoryData} weeklyData={weeklyCategoryData} />
 
           {/* Upcoming bills — only rendered when there are items */}
           <UpcomingBillsCard items={upcomingItems} />

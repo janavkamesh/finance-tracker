@@ -2182,3 +2182,24 @@ Polished the Transactions page summary cards to match the Home page design syste
 - **Day cell background**: Days with both income and expense render a subtle top-green-to-bottom-red gradient background instead of the previous blue wash.
 - **Legend simplified**: Removed the "Both" legend entry; replaced with accurate green/red pair.
 - **Drill-down**: Clicking any day with transactions reveals the full transaction list for that day (implemented via the existing side-panel/inline view in `TransactionCalendar`).
+
+---
+
+## Phase 76 — Dashboard: Category Chart Segmented Control & High-Density Layout
+
+### Feature
+Replaced the "Expenses by category" month dropdown with a Weekly/Monthly segmented control matching the TrendChartCard, and tightened both chart cards to a higher-density layout.
+
+### UX Design & Changes
+
+**Functional Consistency (CategoryPieChart)**
+- **Removed**: Month dropdown (ChevronDown button + 6-month options list) from CategoryPieChart.
+- **Added**: Pill-shaped segmented control ("Weekly" / "Monthly") with identical styling to TrendChartCard — `h-7`, `rounded-full`, `bg-gray-100` container, white active pill with `shadow-sm`, `text-xs font-semibold`.
+- **Live backend connection**: Dashboard server computes two separate category datasets — `categoryData` (current-month 1st–last) and `weeklyCategoryData` (current week Sun–Sat, derived from `allTxns`). Both are passed as props; the component renders whichever matches the active toggle state.
+- **Dynamic title**: Card title updates to "Weekly expenses" / "Monthly expenses" to mirror the "Weekly trend" / "Monthly trend" pattern on TrendChartCard.
+- **"View all" dialog**: Period label in the subtitle updates dynamically ("total this week" / "total this month").
+
+**Spatial Refinement (High-Density Layout)**
+- **CategoryPieChart**: `p-5` → `p-4`; header `mb-4` → `mb-2` (50% reduction); donut `height={200}` → `height={170}`; inner radius 55 → 48, outer radius 85 → 75; legend gap `gap-4` → `gap-3`; empty state `h-[240px]` → `h-[200px]`.
+- **TrendChartCard**: `p-5` → `p-4`; header `mb-4` → `mb-2`.
+- **MonthlyBarChart**: `height={280}` → `height={240}`; empty state `h-[280px]` → `h-[240px]`.
