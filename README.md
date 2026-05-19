@@ -2193,3 +2193,61 @@ Strategic layout and component update to improve visual density, form usability,
 #### Bug 3 — Distracting "Syncing…" Indicator
 **Root cause**: `isPending` from `useTransition` (used to silence the loading skeleton) was also rendered as a visible spinning indicator next to the export menu on every period/category/search navigation.
 **Fix**: Removed the `{isPending && <span>Syncing…</span>}` block and the `opacity-90` / `data-pending` dimming entirely from `TransactionFilters`. Navigation transitions are now completely silent — the list updates when the server data arrives with no intermediate visual noise.
+
+---
+
+## Phase 79 — Transactions Calendar: Split Layout & Redesigned Cells
+
+### Feature
+Restructured the Calendar view on the Transactions page into a balanced split layout with a redesigned information-dense day cell and a new "Last 7 Days" summary sidebar.
+
+### UX Design & Changes
+
+**Split-View Layout (65 / 35)**
+- Replaced the full-width calendar with a `flex gap-4 items-start` two-column layout: the Spending Calendar occupies `flex-1` (≈ 65 %) and a new "Last 7 Days" card occupies a fixed `w-[34%]` right column. Both columns are top-aligned and visually separated by the gap.
+- Wired up `<TransactionCalendar inline={true} />` — previously a "coming soon" placeholder — and fixed the fetch-on-mount bug: the data-fetch `useEffect` was gated on `open` (always `false` in inline mode); it now also fires when `inline={true}`.
+
+**Calendar Cell Redesign**
+- Cells switched from `flex items-center justify-center` to `relative` positioning, giving total layout control.
+- **Date**: `absolute top-1 right-1.5 text-xs font-bold` — pinned to the top-right corner, never overlapping amounts.
+- **Amounts**: `absolute inset-0 flex flex-col items-center justify-center pt-3` — vertically and horizontally centered in the remaining cell space. Both income (green `+`) and expense (red `-`) are shown as separate stacked lines when both exist — replacing the previous single merged value.
+- **Background**: `hasBoth` cells use a `bg-gradient-to-b from-green-50 to-red-50` instead of the flat `bg-blue-50`, communicating the dual nature at a glance.
+- Grid gap increased from `gap-0.5` to `gap-1` for breathing room between cells.
+
+**"Last 7 Days" Sidebar**
+- Card: `rounded-2xl border border-gray-100 bg-white shadow-sm` — matches the existing design system exactly.
+- Header: title "Last 7 Days" above a column-label row (Date / Expense / Income) with color-coded labels (red for expense, green for income).
+- Each of the 7 rows shows: weekday label + short date on the left; red expense amount (`-₹x.xK`) and green income amount (`+₹x.xK`) right-aligned in their columns. Days with no data are muted (`opacity-40`); today is highlighted with a `bg-[#1E6B4E]/5` tint and "Today" label.
+- Data sourced from the already-loaded `transactions` array in `TransactionManager` — zero extra network requests.
+
+---
+
+## Phase 80 — Dashboard: Dynamic Category Card Title
+
+### Bug Fix
+**Context mismatch**: The "Expenses by category" card's title was hardcoded as `"Weekly expenses"` or `"Monthly expenses"` but in a way that didn't match the user's perceived context — specifically, "Weekly expenses" read as a label for a past period rather than the current one the user is actively viewing.
+
+### Changes
+- **`components/dashboard/category-pie-chart.tsx`**: Title derivation updated — `view === "weekly"` now yields `"This week's expenses"` and `view === "monthly"` yields `"This month's expenses"`. The possessive phrasing makes the temporal reference explicit and immediate, eliminating the static-title mismatch.
+- **Layout stability**: Added `whitespace-nowrap` to the `<h2>` so the slightly longer strings never wrap to a second line. Added `shrink-0` to the segmented-control wrapper and `gap-3` to the header flex row so the toggle is never pushed or compressed regardless of title length.
+
+---
+
+## Phase 81 — Header/Navigation Alignment & Summary Card Standardization
+
+### Problem
+The Transactions page had a plain `<main>` with an inline header block, while the Home page used a sticky `h-[88px]` bar. Switching pages caused a visible layout jump: the heading area snapped to a different height, and the summary cards used different padding (`flex flex-col justify-between`), font weight (`font-semibold` vs `font-bold`), and lacked the dot-indicator row that Home used.
+
+### Changes
+
+**`app/(dashboard)/transactions/page.tsx`**
+- Replaced `<main className="p-6 md:p-8">` wrapper with a `<>` fragment containing:
+  - A `sticky top-14 md:top-0 z-10 bg-white border-b border-gray-100 h-[88px]` header bar — pixel-identical to Home's sticky bar.
+  - A `<main className="px-6 md:px-8 pb-8 pt-4">` body — same horizontal padding and top breathing room as Home.
+- Removed the extra `<div className="w-full"><div className="min-w-0">` nesting that added no layout value.
+- Restructured the three summary cards to be 1:1 identical to Home:
+  - `rounded-xl border border-gray-100 bg-white px-4 py-3` container.
+  - Dot-indicator row: `h-2 w-2 rounded-full bg-[color]` + `text-xs text-gray-500` label.
+  - Value row: `text-lg font-bold tabular-nums` + inline `text-[11px] font-medium text-gray-400` delta (↑/↓ %).
+- Net card dot is dynamic: green when net ≥ 0, red when negative.
+- Replaced the old `DeltaBadge` JSX component (which rendered below the value) with `computeDelta` results rendered inline on the same baseline row — matching Home exactly.
