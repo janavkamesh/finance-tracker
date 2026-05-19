@@ -38,6 +38,7 @@ interface Props {
   categories: Category[];
   recurring?: Recurring;
   triggerVariant?: "primary" | "secondary";
+  triggerLabel?: string;
 }
 
 function todayLocal() {
@@ -47,7 +48,7 @@ function todayLocal() {
 
 const FREQUENCY_LABELS = { weekly: "Weekly", monthly: "Monthly", yearly: "Yearly" };
 
-export function RecurringDialog({ categories, recurring, triggerVariant = "primary" }: Props) {
+export function RecurringDialog({ categories, recurring, triggerVariant = "primary", triggerLabel }: Props) {
   const [open, setOpen] = useState(false);
   const isEdit = !!recurring;
 
@@ -142,7 +143,7 @@ export function RecurringDialog({ categories, recurring, triggerVariant = "prima
           )}
         >
           <Plus className="size-4" />
-          Add recurring
+          {triggerLabel ?? "Add recurring"}
         </button>
       )}
 
