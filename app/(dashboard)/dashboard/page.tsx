@@ -61,7 +61,7 @@ export default async function DashboardPage() {
       .single(),
     supabase
       .from("transactions")
-      .select("id, type, amount, date, description, category_id, payment_method, categories(name, color, icon)")
+      .select("id, type, amount, date, description, category_id, payment_method, categories(name, color, icon, user_id)")
       .eq("user_id", user!.id)
       .gte("date", windowStartStr)
       .order("date", { ascending: false }),
@@ -202,7 +202,7 @@ export default async function DashboardPage() {
 
   // ── Recent transactions (last 5) — shaped for AnimatedTransactionList ───────
   const recent = allTxns.slice(0, 5).map((txn) => {
-    const cat = txn.categories as unknown as { name: string; color: string | null; icon: string | null } | null;
+    const cat = txn.categories as unknown as { name: string; color: string | null; icon: string | null; user_id: string | null } | null;
     return {
       id: txn.id,
       type: txn.type as "income" | "expense",
@@ -214,6 +214,7 @@ export default async function DashboardPage() {
       category_name: cat?.name ?? null,
       category_color: cat?.color ?? null,
       category_icon: cat?.icon ?? null,
+      category_user_id: cat?.user_id ?? null,
     };
   });
 

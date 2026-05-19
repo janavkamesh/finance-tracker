@@ -45,12 +45,7 @@ const PRESET_COLORS = [
   "#7C3AED", "#EC4899", "#0D9488", "#92400E",
 ];
 
-/** "Added May 19" — for user-created categories */
-function formatCreatedAt(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return `Added ${d.toLocaleDateString("en-IN", { month: "short", day: "numeric" })}`;
-}
+
 
 // ── Main component ──────────────────────────────────────────────────────────
 export function CategoryPicker({
@@ -347,12 +342,7 @@ export function CategoryPicker({
                       {/* ── Right meta (user categories only) ── */}
                       {isUserCat && !isConfirming && (
                         <div className="flex items-center gap-1.5 shrink-0">
-                          {/* Creation date — always visible, muted */}
-                          {cat.created_at && (
-                            <span className="text-[11px] text-gray-400 font-normal tabular-nums hidden sm:block">
-                              {formatCreatedAt(cat.created_at)}
-                            </span>
-                          )}
+
                           {/* Checkmark for selected */}
                           {isSelected && (
                             <Check className="size-4 text-gray-900 shrink-0" />

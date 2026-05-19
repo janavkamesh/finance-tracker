@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { CategoryPicker } from "@/components/transactions/category-picker";
+import { DatePicker } from "@/components/ui/date-picker";
+import { parse, format } from "date-fns";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Plus, Pencil, Calculator, Delete, Banknote, Smartphone, CreditCard, Building2, Wallet } from "lucide-react";
@@ -479,10 +481,18 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
                   Today
                 </button>
               </div>
-              <input
-                type="date"
-                {...register("date")}
-                className={inputClass}
+              <Controller
+                control={control}
+                name="date"
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value ? parse(field.value, "yyyy-MM-dd", new Date()) : null}
+                    onChange={(date) => {
+                      field.onChange(date ? format(date, "yyyy-MM-dd") : "");
+                    }}
+                    className={cn(inputClass, "py-2 text-left bg-white")}
+                  />
+                )}
               />
               {errors.date && (
                 <p className="mt-1.5 text-xs text-red-600">{errors.date.message}</p>

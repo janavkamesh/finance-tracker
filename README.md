@@ -1934,3 +1934,40 @@ Standardized all default system category icons to a premium, minimalist monochro
 - **Premium SaaS Look**: Stripped hardcoded, multi-colored hex values from system category icons (e.g., Rent, Food, Bills) across the Quick Add dropdown, Transactions filter, and Category popover.
 - **Dynamic Context**: Checks the `user_id` property. System defaults (`null`) render in monochrome. User-created categories (`!== null`) correctly apply and render their specific custom colors via inline styling.
 - **Strict Readability Control**: Ensured that the category text and selection states never inherit the icon colors. Selected categories now render as high-contrast dark neutrals (`text-gray-900 font-semibold`) instead of the brand color, strictly enforcing WCAG readability and visual flow.
+
+---
+
+## Phase 58 — Category Picker Visual Decluttering
+
+### Feature
+- Unify Delete-on-Hover logic for custom categories across both Income & Expense views.
+- Removed the "Added Date" (e.g., "Added 19 May") metadata from the category picker dropdown for custom user-created categories.
+
+### UX Design & Changes
+- **Visual Decluttering**: Analyzed the dropdown UI and determined that the category creation date was redundant information that cluttered the list row. 
+- **Focus Optimization**: By removing this non-essential metadata, users can focus entirely on the category name and icon during the selection process. This maintains a clean, minimalist, and frictionless user flow when adding a transaction.
+- **Unified Interaction**: Unified the hover-to-delete interaction logic so that custom categories always show the delete icon button regardless of the transaction type tab.
+
+---
+
+## Phase 59 — Neutralize Category Badges
+
+### Feature
+Stripped unnecessary multi-colored styling from system default category badges across all transaction lists to match the new minimalist monochrome aesthetic.
+
+### UX Design & Changes
+- **Neutral Styling**: Applied a light, muted background (`bg-gray-100`) and text (`text-gray-700`) to all default system category badges in the Recent Transactions widget and the main Transactions list.
+- **Custom Category Preservation**: Updated the transaction mappings to include the category's `user_id`. Badges for custom user-created categories strictly retain their custom hex colors for easy recognition.
+- **Chart Isolation**: Intentionally excluded the dashboard "Expense by category" donut chart and legend from this change, ensuring data visualizations remain fully colored for maximum readability.
+
+---
+
+## Phase 60 — Standardizing Date Pickers
+
+### Feature
+Replaced native, clunky browser date inputs with a custom, beautifully styled React popover DatePicker across all forms (Transaction, Recurring, and Goal creation).
+
+### UX Design & Changes
+- **Tailored Popover UI**: Embedded the Shadcn Popover & Calendar components, wrapping them in a standard headless React hook controller structure.
+- **Brand Colors & Typography**: Replaced default browser blue selections with the dashboard's core forest green highlight (`bg-[#1E6B4E]`). Added premium hover states (`hover:bg-slate-100 text-slate-900`) and styled using clean, rounded corners (`rounded-md`).
+- **Interactive Utilities**: Provided clear, minimalist text links for "Today" and "Clear" actions to avoid bulky buttons.

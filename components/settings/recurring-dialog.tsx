@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { DatePicker } from "@/components/ui/date-picker";
+import { parse, format } from "date-fns";
 import { toast } from "sonner";
 import { Plus, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -262,7 +264,19 @@ export function RecurringDialog({ categories, recurring, triggerVariant = "prima
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 {isEdit ? "Next due date" : "First occurrence"}
               </label>
-              <input type="date" {...register("next_due_date")} className={inputClass} />
+              <Controller
+                control={control}
+                name="next_due_date"
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value ? parse(field.value, "yyyy-MM-dd", new Date()) : null}
+                    onChange={(date) => {
+                      field.onChange(date ? format(date, "yyyy-MM-dd") : "");
+                    }}
+                    className={cn(inputClass, "py-2 text-left bg-white")}
+                  />
+                )}
+              />
               {errors.next_due_date && (
                 <p className="mt-1.5 text-xs text-red-600">{errors.next_due_date.message}</p>
               )}

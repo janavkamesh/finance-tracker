@@ -17,9 +17,9 @@ interface TxnRow {
   description: string;
   category_id: string;
   payment_method?: string | null;
-  category_name?: string | null;
   category_color?: string | null;
   category_icon?: string | null;
+  category_user_id?: string | null;
 }
 
 interface CategoryItem {
@@ -28,6 +28,7 @@ interface CategoryItem {
   type: "income" | "expense" | "both";
   color: string | null;
   icon?: string | null;
+  user_id?: string | null;
 }
 
 interface Props {
@@ -140,6 +141,7 @@ export function TransactionManager({ initialTransactions, categories, activeMont
       category_name: cat?.name ?? null,
       category_color: cat?.color ?? null,
       category_icon: cat?.icon ?? null,
+      category_user_id: cat?.user_id ?? null,
     };
     // Prepend to list and sort by date descending so it lands in the right group
     setTransactions((prev) => [newTxn, ...prev]);
@@ -351,11 +353,19 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                           <div className="flex items-center gap-2 mt-0.5">
                             {txn.category_name && (
                               <span
-                                className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium"
-                                style={{
-                                  backgroundColor: txn.category_color ? `${txn.category_color}18` : "#f3f4f6",
-                                  color: txn.category_color ?? "#6b7280",
-                                }}
+                                className={cn(
+                                  "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium",
+                                  (!txn.category_user_id || !txn.category_color) &&
+                                    "bg-gray-100 text-gray-700"
+                                )}
+                                style={
+                                  txn.category_user_id && txn.category_color
+                                    ? {
+                                        backgroundColor: `${txn.category_color}18`,
+                                        color: txn.category_color,
+                                      }
+                                    : undefined
+                                }
                               >
                                 {Icon && <Icon className="size-3 shrink-0" />}
                                 {txn.category_name}

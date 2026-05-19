@@ -159,7 +159,7 @@ export default async function TransactionsPage({
   // Build transactions query with filters
   let query = supabase
     .from("transactions")
-    .select("*, categories(name, color, type)")
+    .select("*, categories(name, color, type, user_id)")
     .eq("user_id", user!.id)
     .order("date", { ascending: false })
     .order("created_at", { ascending: false });
@@ -305,7 +305,7 @@ export default async function TransactionsPage({
           <TransactionManager
             initialTransactions={txns.slice(0, 20).map((txn) => {
               const cat = txn.categories as
-                | { name: string; color: string | null; type: string }
+                | { name: string; color: string | null; type: string; user_id: string | null }
                 | null;
               return {
                 id: txn.id,
@@ -318,6 +318,7 @@ export default async function TransactionsPage({
                 category_name: cat?.name ?? null,
                 category_color: cat?.color ?? null,
                 category_icon: null,
+                category_user_id: cat?.user_id ?? null,
               };
             })}
             categories={cats}

@@ -23,6 +23,7 @@ export interface TransactionItem {
   category_name?: string | null;
   category_color?: string | null;
   category_icon?: string | null;
+  category_user_id?: string | null;
 }
 
 export interface CategoryItem {
@@ -200,13 +201,19 @@ export function AnimatedTransactionList({ transactions, categories }: Props) {
                         });
                         return (
                           <span
-                            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium"
-                            style={{
-                              backgroundColor: txn.category_color
-                                ? `${txn.category_color}18`
-                                : "#f3f4f6",
-                              color: txn.category_color ?? "#6b7280",
-                            }}
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium",
+                              (!txn.category_user_id || !txn.category_color) &&
+                                "bg-gray-100 text-gray-700"
+                            )}
+                            style={
+                              txn.category_user_id && txn.category_color
+                                ? {
+                                    backgroundColor: `${txn.category_color}18`,
+                                    color: txn.category_color,
+                                  }
+                                : undefined
+                            }
                           >
                             <CatIcon className="size-2.5 shrink-0" />
                             {txn.category_name}

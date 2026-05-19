@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { DatePicker } from "@/components/ui/date-picker";
+import { parse, format } from "date-fns";
 import { toast } from "sonner";
 import { Plus, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -129,7 +131,20 @@ export function GoalDialog({ goal }: Props) {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Target date <span className="text-gray-400 font-normal">(optional)</span>
               </label>
-              <input type="date" {...register("target_date")} className={inputClass} />
+              <Controller
+                control={control}
+                name="target_date"
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value ? parse(field.value, "yyyy-MM-dd", new Date()) : null}
+                    onChange={(date) => {
+                      field.onChange(date ? format(date, "yyyy-MM-dd") : "");
+                    }}
+                    className={cn(inputClass, "py-2 text-left bg-white")}
+                    placeholder="Pick target date"
+                  />
+                )}
+              />
             </div>
 
             <div>
