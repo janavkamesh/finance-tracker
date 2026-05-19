@@ -47,7 +47,7 @@ export function CustomSelect({ options, value, onChange, className, placeholder 
         )}
       >
         {selected?.icon && <span className="shrink-0 flex items-center">{selected.icon}</span>}
-        <span className="flex-1 text-left truncate">
+        <span className={cn("flex-1 truncate", selected ? "text-left" : "text-center text-gray-400")}>
           {selected?.label ?? placeholder}
         </span>
         <ChevronDown

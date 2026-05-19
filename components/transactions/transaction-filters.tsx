@@ -128,12 +128,8 @@ export function TransactionFilters({
       className={
         wrapperClassName !== undefined
           ? wrapperClassName
-          : cn(
-              "flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap transition-opacity",
-              isPending && "opacity-90",
-            )
+          : "flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap"
       }
-      data-pending={isPending ? "true" : undefined}
     >
       {/* Search */}
       <div className="relative">
@@ -212,17 +208,6 @@ export function TransactionFilters({
         </button>
       )}
 
-      {/* Background sync indicator — non-blocking, replaces the old skeleton flash */}
-      {isPending && (
-        <span
-          className="flex items-center gap-1.5 text-xs text-gray-400"
-          role="status"
-          aria-live="polite"
-        >
-          <span className="inline-block size-3 rounded-full border-2 border-gray-300 border-t-[#1E6B4E] animate-spin" />
-          Syncing…
-        </span>
-      )}
     </div>
   );
 }

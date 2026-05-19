@@ -6,8 +6,6 @@ export const metadata: Metadata = {
 };
 import { createClient, getUser } from "@/lib/supabase/server";
 import { formatINR } from "@/lib/utils";
-import { TransactionDialog } from "@/components/transactions/transaction-dialog";
-import { TransactionFilters } from "@/components/transactions/transaction-filters";
 import { TransactionManager } from "@/components/transactions/transaction-manager";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
@@ -156,7 +154,9 @@ export default async function TransactionsPage({
     .order("date", { ascending: false })
     .order("created_at", { ascending: false });
 
-  if (search) query = query.ilike("description", `%${search}%`);
+  // Search is applied client-side for instant, case-insensitive results that
+  // also match category names. Removing it from the server query keeps
+  // TransactionManager always mounted so the search input never loses focus.
   if (categoryFilter) query = query.eq("category_id", categoryFilter);
 
   const dateRange = getDateRange(period);
@@ -164,7 +164,6 @@ export default async function TransactionsPage({
   if (dateRange?.end) query = query.lte("date", dateRange.end);
 
   let prevQuery = supabase.from("transactions").select("amount, type").eq("user_id", user!.id);
-  if (search) prevQuery = prevQuery.ilike("description", `%${search}%`);
   if (categoryFilter) prevQuery = prevQuery.eq("category_id", categoryFilter);
   
   const prevDateRange = getPreviousDateRange(period);
@@ -263,76 +262,39 @@ export default async function TransactionsPage({
         </div>
       </div>
 
-      {/* Filters — always visible when there are no transactions (so user can clear them) */}
-      {txns.length === 0 && (search || categoryFilter || period !== "this_month") && (
-        <div className="mb-4">
-          <Suspense fallback={null}>
-            <TransactionFilters
-              categories={cats.map((c) => ({ id: c.id, name: c.name }))}
-              showExportMenu
-            />
-          </Suspense>
-        </div>
-      )}
-
-      {/* Empty state */}
-      {txns.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white py-16 text-center px-6">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 mb-4">
-            <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0c1.1.128 1.907 1.077 1.907 2.185z" />
-            </svg>
-          </div>
-          {search || categoryFilter ? (
-            <>
-              <p className="text-sm font-medium text-gray-900">{emptyFilterMessage}</p>
-              <p className="text-sm text-gray-500 mt-1">Try adjusting or clearing the filters above.</p>
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-medium text-gray-900">Nothing here yet</p>
-              <p className="text-sm text-gray-500 mt-1 mb-5">
-                Track your first income or expense to see it here.
-              </p>
-              <TransactionDialog categories={cats} activeMonth={activePeriodMonth} />
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Transaction list + filters — managed by client component for bulk selection */}
-      {txns.length > 0 && (
-        <Suspense fallback={null}>
-          <TransactionManager
-            initialTransactions={txns.slice(0, 20).map((txn) => {
-              const cat = txn.categories as
-                | { name: string; color: string | null; type: string; user_id: string | null }
-                | null;
-              return {
-                id: txn.id,
-                type: txn.type as "income" | "expense",
-                amount: Number(txn.amount),
-                date: txn.date,
-                description: txn.description ?? "",
-                category_id: txn.category_id ?? "",
-                payment_method: (txn as Record<string, unknown>).payment_method as string | null ?? null,
-                category_name: cat?.name ?? null,
-                category_color: cat?.color ?? null,
-                category_icon: null,
-                category_user_id: cat?.user_id ?? null,
-              };
-            })}
-            categories={cats}
-            activeMonth={activePeriodMonth}
-            filters={{
-              search,
-              typeFilter,
-              categoryFilter,
-              period,
-            }}
-          />
-        </Suspense>
-      )}
+      {/* Transaction list + filters — always mounted so the search input never loses focus.
+          Empty-state rendering is handled inside TransactionManager. */}
+      <Suspense fallback={null}>
+        <TransactionManager
+          initialTransactions={txns.slice(0, 20).map((txn) => {
+            const cat = txn.categories as
+              | { name: string; color: string | null; type: string; user_id: string | null }
+              | null;
+            return {
+              id: txn.id,
+              type: txn.type as "income" | "expense",
+              amount: Number(txn.amount),
+              date: txn.date,
+              description: txn.description ?? "",
+              category_id: txn.category_id ?? "",
+              payment_method: (txn as Record<string, unknown>).payment_method as string | null ?? null,
+              category_name: cat?.name ?? null,
+              category_color: cat?.color ?? null,
+              category_icon: null,
+              category_user_id: cat?.user_id ?? null,
+            };
+          })}
+          categories={cats}
+          activeMonth={activePeriodMonth}
+          emptyMessage={emptyFilterMessage}
+          filters={{
+            search: "",
+            typeFilter,
+            categoryFilter,
+            period,
+          }}
+        />
+      </Suspense>
         </div>
       </div>
     </main>

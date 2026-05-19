@@ -2110,34 +2110,34 @@ Expanded `/goals` (`app/(dashboard)/goals/page.tsx`) from a single-purpose savin
 
 ---
 
-## Phase 71 — Transactions Page: 2-Row Control Area Compression
+## Phase 71 ï¿½ Transactions Page: 2-Row Control Area Compression
 
 ### Feature
 Compressed the Transactions page control area from three scattered rows into a tight, space-efficient 2-row layout.
 
 ### UX Design & Changes
-- **Row 1 — Tabs + Filters + Primary Action**: The "All / Income / Expense" type tabs, the Search bar, Month dropdown, Category dropdown, and the 3-dot export menu are now co-located on the same horizontal line. The "+ Add Transaction" button is pinned to the far right via `ml-auto`. A `flex-wrap gap-4` outer container ensures graceful wrapping on smaller laptop screens — the filters wrap before the Add button is ever displaced.
-- **Row 2 — Bulk Actions & View Toggles**: The Select (bulk action) toggle sits on the far left; the List / Calendar view toggle sits on the far right, aligned via `justify-between`. The row is visually lighter now that the filters no longer compete for the same line.
+- **Row 1 ï¿½ Tabs + Filters + Primary Action**: The "All / Income / Expense" type tabs, the Search bar, Month dropdown, Category dropdown, and the 3-dot export menu are now co-located on the same horizontal line. The "+ Add Transaction" button is pinned to the far right via `ml-auto`. A `flex-wrap gap-4` outer container ensures graceful wrapping on smaller laptop screens ï¿½ the filters wrap before the Add button is ever displaced.
+- **Row 2 ï¿½ Bulk Actions & View Toggles**: The Select (bulk action) toggle sits on the far left; the List / Calendar view toggle sits on the far right, aligned via `justify-between`. The row is visually lighter now that the filters no longer compete for the same line.
 - **Implementation**: Added a `wrapperClassName` prop to `TransactionFilters` (`components/transactions/transaction-filters.tsx`). When `wrapperClassName="contents"` is passed, the filter wrapper uses CSS `display: contents` so its children (Search, Period, Category, kebab menu) participate directly in the parent flex container, rendering inline with the tabs as true flex siblings. Restructured `transaction-manager.tsx` to the new 2-row DOM structure accordingly.
 
 ---
 
-## Phase 72 — Transactions Page: Strict 4-Column Grid Row Layout
+## Phase 72 ï¿½ Transactions Page: Strict 4-Column Grid Row Layout
 
 ### Feature
 Replaced the ad-hoc flex layout on individual transaction rows with a strict CSS Grid to lock alignment across all rows regardless of content length.
 
 ### UX Design & Changes
-- **Grid proportions**: `gridTemplateColumns: "2fr 0.6fr 0.8fr 0.6fr"` — resolves to 50% / 15% / 20% / 15% across the full row width.
-- **Col 1 — Context (50%)**: Category icon chip + description (bold primary text) on top; date and category pill on the subtitle line. The category pill now uses the category's brand color as a tinted background chip (same `color + 1a` alpha as the icon chip) for immediate visual association.
-- **Col 2 — Method (15%, centered)**: Payment method pill (UPI / Card / Cash etc.) isolated in its own column. Renders an em-dash placeholder when no method is recorded, keeping the column width stable.
-- **Col 3 — Amount (20%, right-aligned)**: Income shown in `text-green-600` with `+` prefix; expenses in `text-red-600` with `-` prefix. Right-aligned `tabular-nums` ensures amounts stack cleanly.
-- **Col 4 — Actions (15%, right-aligned)**: Edit and Delete icon buttons pinned to the far right edge via `justify-end`. Hidden for optimistic rows.
+- **Grid proportions**: `gridTemplateColumns: "2fr 0.6fr 0.8fr 0.6fr"` ï¿½ resolves to 50% / 15% / 20% / 15% across the full row width.
+- **Col 1 ï¿½ Context (50%)**: Category icon chip + description (bold primary text) on top; date and category pill on the subtitle line. The category pill now uses the category's brand color as a tinted background chip (same `color + 1a` alpha as the icon chip) for immediate visual association.
+- **Col 2 ï¿½ Method (15%, centered)**: Payment method pill (UPI / Card / Cash etc.) isolated in its own column. Renders an em-dash placeholder when no method is recorded, keeping the column width stable.
+- **Col 3 ï¿½ Amount (20%, right-aligned)**: Income shown in `text-green-600` with `+` prefix; expenses in `text-red-600` with `-` prefix. Right-aligned `tabular-nums` ensures amounts stack cleanly.
+- **Col 4 ï¿½ Actions (15%, right-aligned)**: Edit and Delete icon buttons pinned to the far right edge via `justify-end`. Hidden for optimistic rows.
 - **Checkbox compatibility**: The selection-mode checkbox remains as a leading flex item outside the grid so it does not disturb column proportions when toggled.
 
 ---
 
-## Phase 73 — Quick Add Form: Dropdown Labels & Description Placeholder
+## Phase 73 ï¿½ Quick Add Form: Dropdown Labels & Description Placeholder
 
 ### Feature
 Improved clarity and accessibility of the Quick Add transaction strip inputs.
@@ -2145,20 +2145,20 @@ Improved clarity and accessibility of the Quick Add transaction strip inputs.
 ### UX Design & Changes
 - **Category label**: Added a small `10px / uppercase / tracked / gray-400` label reading "Category" directly above the category dropdown. Once a value is selected the label keeps the field identifiable at a glance.
 - **Payment Method label**: Same premium label treatment applied above the payment method dropdown, reading "Payment Method". Solves the context-loss problem where the selected value (e.g. "UPI") gives no hint of what the field represents.
-- **Description placeholder**: Changed the free-text input placeholder from "Note (optional)" to "Description (optional)" — language consistent with financial ledger conventions and the rest of the app.
+- **Description placeholder**: Changed the free-text input placeholder from "Note (optional)" to "Description (optional)" ï¿½ language consistent with financial ledger conventions and the rest of the app.
 - Each labelled dropdown is wrapped in a `flex flex-col gap-0.5` container so the label sits flush above its control without disturbing the row's horizontal flex layout on desktop or the stacked layout on mobile.
 
 ---
 
-## Phase 74 — Dashboard Charts: Segmented Control & Month Dropdown Header Controls
+## Phase 74 ï¿½ Dashboard Charts: Segmented Control & Month Dropdown Header Controls
 
 ### Feature
 Standardised the header controls on the two main dashboard charts, replacing confusing arrow-based pagination with industry-standard toggle patterns.
 
 ### UX Design & Changes
-- **Weekly trend card — Segmented Control**: Removed the `<` / `>` ChevronLeft/Right arrow buttons and the dot-indicator row. Replaced with a pill-shaped segmented control (`bg-gray-100` container, `h-7`, `rounded-full`) in the top-right of the card header. Active segment slides a white pill with `shadow-sm` over the inactive option. The card title remains left-aligned and updates dynamically ("Weekly trend" / "Monthly trend") to reflect the active segment.
-- **Expenses by category card — Month Dropdown**: `CategoryPieChart` now owns its own card chrome (`rounded-2xl border border-gray-100 bg-white p-5`) and renders the full card header internally. The title "Expenses by category" is left-aligned. A minimal month dropdown button (`h-7 rounded-full border border-gray-200`, same height as the segmented control) sits top-right, displaying the selected month name (e.g. "May 2026") and a `ChevronDown` caret. Clicking opens a 6-month dropdown list; the active month is highlighted in brand green. Outside-click closes the menu.
-- **Visual balance**: Both controls share `h-7` height, `rounded-full` shape, `text-xs font-semibold` typography, and `border-gray-200` borders — they read as a matched pair across the two adjacent cards.
+- **Weekly trend card ï¿½ Segmented Control**: Removed the `<` / `>` ChevronLeft/Right arrow buttons and the dot-indicator row. Replaced with a pill-shaped segmented control (`bg-gray-100` container, `h-7`, `rounded-full`) in the top-right of the card header. Active segment slides a white pill with `shadow-sm` over the inactive option. The card title remains left-aligned and updates dynamically ("Weekly trend" / "Monthly trend") to reflect the active segment.
+- **Expenses by category card ï¿½ Month Dropdown**: `CategoryPieChart` now owns its own card chrome (`rounded-2xl border border-gray-100 bg-white p-5`) and renders the full card header internally. The title "Expenses by category" is left-aligned. A minimal month dropdown button (`h-7 rounded-full border border-gray-200`, same height as the segmented control) sits top-right, displaying the selected month name (e.g. "May 2026") and a `ChevronDown` caret. Clicking opens a 6-month dropdown list; the active month is highlighted in brand green. Outside-click closes the menu.
+- **Visual balance**: Both controls share `h-7` height, `rounded-full` shape, `text-xs font-semibold` typography, and `border-gray-200` borders ï¿½ they read as a matched pair across the two adjacent cards.
 - **Dashboard page simplification**: Removed the now-redundant wrapper `<div>` and `<h2>` for the category card from `app/(dashboard)/dashboard/page.tsx`. The component is fully self-contained.
 
 ---
@@ -2203,3 +2203,36 @@ Replaced the "Expenses by category" month dropdown with a Weekly/Monthly segment
 - **CategoryPieChart**: `p-5` â†’ `p-4`; header `mb-4` â†’ `mb-2` (50% reduction); donut `height={200}` â†’ `height={170}`; inner radius 55 â†’ 48, outer radius 85 â†’ 75; legend gap `gap-4` â†’ `gap-3`; empty state `h-[240px]` â†’ `h-[200px]`.
 - **TrendChartCard**: `p-5` â†’ `p-4`; header `mb-4` â†’ `mb-2`.
 - **MonthlyBarChart**: `height={280}` â†’ `height={240}`; empty state `h-[280px]` â†’ `h-[240px]`.
+
+---
+
+## Phase 77 â€” Dashboard Layout & Form UX Polish
+
+### Feature
+Strategic layout and component update to improve visual density, form usability, and premium feel across the main dashboard.
+
+### UX Design & Changes
+- **Quick-add dropdowns â€” inline placeholder labels**: Removed external `Category` and `Payment Method` labels that floated above their dropdowns. Both fields now show their label as a centered, muted placeholder inside the button itself (via `CustomSelect`'s placeholder prop). When a value is selected the text left-aligns and adopts the selected option's icon; the default placeholder state uses `text-center text-gray-400` styling for a clean, uncluttered form row.
+- **Quick-add validation gate**: `categoryId` and `paymentMethod` now default to `""` (unselected). The "Log" submit button is disabled (`opacity-50 cursor-not-allowed`) until the user picks a Category â€” the Payment Method field remains optional. This prevents accidental uncategorised submissions.
+- **Expense summary cards â€” horizontal delta**: The month-over-month change figure (e.g. `â†‘ â‚¹10.2K`) is now rendered inline to the right of the primary value using `flex items-baseline gap-2`. The secondary figure uses `text-[11px]` weight, `text-gray-400` colour, and `items-baseline` alignment â€” visually subordinate but immediately legible without an extra line of height.
+- **Summary card height reduction (âˆ’24 px)**: Card padding changed from `p-4` (16 px all sides) to `px-4 py-1` (4 px top/bottom). This saves exactly 24 px of vertical space per card and, combined with the inline delta, creates a denser, more dashboard-like summary row.
+- **Nav bar height increase (+24 px)**: Sidebar brand section and the dashboard's sticky greeting bar both increased from `h-16` (64 px) to `h-[88px]` (88 px). The two elements share a border-bottom that runs flush across the sidebar/main seam â€” matching heights preserves that alignment while giving the logo area a more spacious, premium feel.
+
+---
+
+## Phase 78 â€” Transactions Page: Search Focus, Accuracy & Silent Filtering
+
+### Bug Fixes
+
+#### Bug 1 â€” Search Input Focus Loss (Critical)
+**Root cause**: `TransactionManager` (which owns the search input via its child `TransactionFilters`) was conditionally rendered only when `txns.length > 0`. When the server-side query for a search term returned zero results (common for transactions whose description is empty â€” they display via `category_name` instead), the component unmounted, destroying focus.
+**Fix**: Removed the `txns.length > 0` gate from the page. `TransactionManager` is now always mounted inside its `<Suspense>` boundary. Empty states (truly no data / no match) are handled inside `TransactionManager` itself, preserving the search input's focus at all times.
+
+#### Bug 2 â€” Search Returns "No Results" for Visible Transactions
+**Root cause â€” server side**: The server filtered with `ilike("description", "%search%")`. Transactions that had no description (displaying only their category name) never matched.
+**Root cause â€” client side**: The client filter in `TransactionManager` also only checked `t.description`, so `liveSearch = "travel"` would not match a transaction showing "Travel" (its category name).
+**Fix**: Removed the server-side `description` search filter entirely â€” search is now 100% client-side and instant. The `clientFiltered` memo now checks `(t.description).toLowerCase().includes(liveSearch) || (t.category_name).toLowerCase().includes(liveSearch)`, catching all visible representations. Infinite-scroll batch fetches also no longer send the search term (it's meaningless server-side now).
+
+#### Bug 3 â€” Distracting "Syncingâ€¦" Indicator
+**Root cause**: `isPending` from `useTransition` (used to silence the loading skeleton) was also rendered as a visible spinning indicator next to the export menu on every period/category/search navigation.
+**Fix**: Removed the `{isPending && <span>Syncingâ€¦</span>}` block and the `opacity-90` / `data-pending` dimming entirely from `TransactionFilters`. Navigation transitions are now completely silent â€” the list updates when the server data arrives with no intermediate visual noise.
