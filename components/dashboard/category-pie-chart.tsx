@@ -105,14 +105,14 @@ export function CategoryPieChart({
   const [viewAllOpen, setViewAllOpen] = useState(false);
 
   const activeData = view === "weekly" ? weeklyData : data;
-  const title = view === "weekly" ? "Weekly expenses" : "Monthly expenses";
+  const title = view === "weekly" ? "This week's expenses" : "This month's expenses";
 
   const cardHeader = (
-    <div className="flex items-center justify-between mb-2">
-      <h2 className="text-sm font-semibold text-gray-900">{title}</h2>
+    <div className="flex items-center justify-between gap-3 mb-2">
+      <h2 className="text-sm font-semibold text-gray-900 whitespace-nowrap">{title}</h2>
 
       {/* Segmented control — identical to TrendChartCard */}
-      <div className="flex h-7 items-center gap-0.5 rounded-full bg-gray-100 p-0.5">
+      <div className="flex h-7 items-center gap-0.5 rounded-full bg-gray-100 p-0.5 shrink-0">
         <button
           type="button"
           onClick={() => setView("weekly")}
