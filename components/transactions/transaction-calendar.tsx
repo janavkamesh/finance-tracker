@@ -44,8 +44,10 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
   const [dayDetail, setDayDetail] = useState<DayTransaction[]>([]);
   const [dayDetailLoading, setDayDetailLoading] = useState(false);
 
-  // Client-side cache: month key → day data map. Prevents re-fetching visited months.
+  // Client-side cache: month key → day data map
   const cacheRef = useRef<Map<string, Record<string, DayData>>>(new Map());
+  // Client-side cache: date key → day transactions (populated on hover or click)
+  const dayDetailCacheRef = useRef<Map<string, DayTransaction[]>>(new Map());
 
   const fetchMonth = useCallback(async (y: number, m: number, updateUI = true) => {
     const key = `${y}-${m}`;
@@ -68,35 +70,68 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
     }
   }, []);
 
-  // Fetch current month on open / month change (or immediately when inline)
+  // Shared fetcher with client-side cache — used for both hover prefetch and click
+  const fetchDayDetail = useCallback(async (dateKey: string): Promise<DayTransaction[]> => {
+    if (dayDetailCacheRef.current.has(dateKey)) {
+      return dayDetailCacheRef.current.get(dateKey)!;
+    }
+    const txns = await getDayTransactions(dateKey);
+    dayDetailCacheRef.current.set(dateKey, txns);
+    return txns;
+  }, []);
+
   useEffect(() => {
     if (!open && !inline) return;
     fetchMonth(year, month);
   }, [open, inline, year, month, fetchMonth]);
 
-  // Silently prefetch adjacent months so navigation feels instant
+  // Silently prefetch adjacent months for instant navigation
   useEffect(() => {
     if (!open && !inline) return;
     const prevM = month === 1 ? 12 : month - 1;
     const prevY = month === 1 ? year - 1 : year;
     fetchMonth(prevY, prevM, false);
-
-    const isAtCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
-    if (!isAtCurrentMonth) {
+    const isAtCurrent = year === now.getFullYear() && month === now.getMonth() + 1;
+    if (!isAtCurrent) {
       const nextM = month === 12 ? 1 : month + 1;
       const nextY = month === 12 ? year + 1 : year;
       fetchMonth(nextY, nextM, false);
     }
   }, [open, inline, year, month, fetchMonth]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Hover prefetch — start fetching day transactions before the user clicks
+  function handleDayHover(day: number) {
+    const dateKey = `${year}-${pad(month)}-${pad(day)}`;
+    const info = dayData[dateKey];
+    if (info && (info.income > 0 || info.expense > 0) && !dayDetailCacheRef.current.has(dateKey)) {
+      fetchDayDetail(dateKey); // fire-and-forget; populates cache
+    }
+  }
+
   async function handleDayClick(day: number) {
     const dateKey = `${year}-${pad(month)}-${pad(day)}`;
     const info = dayData[dateKey];
-    if (!info || (info.income === 0 && info.expense === 0)) return;
+    const hasData = info && (info.income > 0 || info.expense > 0);
+
+    // Show panel immediately — no waiting
     setSelectedDay(dateKey);
     setDayDetail([]);
+
+    if (!hasData) {
+      // Empty day — no fetch needed, show empty state instantly
+      setDayDetailLoading(false);
+      return;
+    }
+
+    // Check cache first (may have been populated by hover prefetch)
+    if (dayDetailCacheRef.current.has(dateKey)) {
+      setDayDetail(dayDetailCacheRef.current.get(dateKey)!);
+      setDayDetailLoading(false);
+      return;
+    }
+
     setDayDetailLoading(true);
-    const txns = await getDayTransactions(dateKey);
+    const txns = await fetchDayDetail(dateKey);
     setDayDetail(txns);
     setDayDetailLoading(false);
   }
@@ -108,8 +143,8 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
   }
 
   function nextMonth() {
-    const isAtCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
-    if (isAtCurrentMonth) return;
+    const isAtCurrent = year === now.getFullYear() && month === now.getMonth() + 1;
+    if (isAtCurrent) return;
     setSelectedDay(null);
     if (month === 12) { setMonth(1); setYear((y) => y + 1); }
     else setMonth((m) => m + 1);
@@ -131,9 +166,10 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
     monthExpense += expense;
   });
 
-  // ── Day detail view ──────────────────────────────────────────────────────
+  // ── Day detail panel ──────────────────────────────────────────────────────
   if (selectedDay) {
     const info = dayData[selectedDay] ?? { income: 0, expense: 0 };
+    const hasData = info.income > 0 || info.expense > 0;
     const displayDate = new Date(selectedDay + "T00:00:00").toLocaleDateString("en-IN", {
       weekday: "long", day: "numeric", month: "long", year: "numeric",
     });
@@ -148,78 +184,80 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
             >
               <ArrowLeft className="size-4" />
             </button>
-            <h3 className="text-base font-semibold text-gray-900 leading-tight">
-              {displayDate}
-            </h3>
+            <h3 className="text-base font-semibold text-gray-900 leading-tight">{displayDate}</h3>
           </div>
         )}
 
-        {/* Income / Expense summary cards */}
-              <div className={cn("grid gap-3 mb-4", info.income > 0 && info.expense > 0 ? "grid-cols-2" : "grid-cols-1")}>
-                {info.income > 0 && (
-                  <div className="rounded-xl bg-green-50 border border-green-100 px-4 py-3.5">
-                    <p className="text-[10px] text-green-600 font-semibold uppercase tracking-wide mb-1">Income</p>
-                    <p className="text-2xl font-bold text-green-700 tabular-nums">{formatINR(info.income)}</p>
-                  </div>
-                )}
-                {info.expense > 0 && (
-                  <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3.5">
-                    <p className="text-[10px] text-red-600 font-semibold uppercase tracking-wide mb-1">Expenses</p>
-                    <p className="text-2xl font-bold text-red-700 tabular-nums">{formatINR(info.expense)}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Transaction list */}
-              {dayDetailLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-[#1E6B4E]" />
+        {hasData ? (
+          <>
+            <div className={cn("grid gap-3 mb-4", info.income > 0 && info.expense > 0 ? "grid-cols-2" : "grid-cols-1")}>
+              {info.income > 0 && (
+                <div className="rounded-xl bg-green-50 border border-green-100 px-4 py-3.5">
+                  <p className="text-[10px] text-green-600 font-semibold uppercase tracking-wide mb-1">Income</p>
+                  <p className="text-2xl font-bold text-green-700 tabular-nums">{formatINR(info.income)}</p>
                 </div>
-              ) : dayDetail.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-4">No transactions found</p>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-                    {dayDetail.length} transaction{dayDetail.length !== 1 ? "s" : ""}
-                  </p>
-                  {dayDetail.map((txn, i) => (
-                    <div key={i} className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-3.5 py-3">
-                      <div
-                        className="h-9 w-9 shrink-0 rounded-lg flex items-center justify-center"
-                        style={{
-                          backgroundColor: `${txn.category_color ?? (txn.type === "income" ? "#16A34A" : "#DC2626")}18`,
-                        }}
-                      >
-                        <div
-                          className="h-2.5 w-2.5 rounded-full"
-                          style={{ backgroundColor: txn.category_color ?? (txn.type === "income" ? "#16A34A" : "#DC2626") }}
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">
-                          {txn.description || "Untitled"}
-                        </p>
-                        {txn.category_name && (
-                          <p className="text-xs text-gray-400 mt-0.5">{txn.category_name}</p>
-                        )}
-                      </div>
-                      <span className={cn(
-                        "text-sm font-bold tabular-nums shrink-0",
-                        txn.type === "income" ? "text-green-600" : "text-red-600"
-                      )}>
-                        {txn.type === "income" ? "+" : "-"}{formatINR(txn.amount)}
-                      </span>
-                    </div>
-                  ))}
+              )}
+              {info.expense > 0 && (
+                <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3.5">
+                  <p className="text-[10px] text-red-600 font-semibold uppercase tracking-wide mb-1">Expenses</p>
+                  <p className="text-2xl font-bold text-red-700 tabular-nums">{formatINR(info.expense)}</p>
                 </div>
               )}
             </div>
+
+            {dayDetailLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-[#1E6B4E]" />
+              </div>
+            ) : dayDetail.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-4">No transactions found</p>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                  {dayDetail.length} transaction{dayDetail.length !== 1 ? "s" : ""}
+                </p>
+                {dayDetail.map((txn, i) => (
+                  <div key={i} className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-3.5 py-3">
+                    <div
+                      className="h-9 w-9 shrink-0 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: `${txn.category_color ?? (txn.type === "income" ? "#16A34A" : "#DC2626")}18` }}
+                    >
+                      <div
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: txn.category_color ?? (txn.type === "income" ? "#16A34A" : "#DC2626") }}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{txn.description || "Untitled"}</p>
+                      {txn.category_name && (
+                        <p className="text-xs text-gray-400 mt-0.5">{txn.category_name}</p>
+                      )}
+                    </div>
+                    <span className={cn("text-sm font-bold tabular-nums shrink-0", txn.type === "income" ? "text-green-600" : "text-red-600")}>
+                      {txn.type === "income" ? "+" : "-"}{formatINR(txn.amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          /* Empty day — instant, no fetch */
+          <div className="flex flex-col items-center justify-center py-14 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 mb-4">
+              <CalendarDays className="h-6 w-6 text-gray-300" />
+            </div>
+            <p className="text-sm font-semibold text-gray-500">No transactions</p>
+            <p className="text-xs text-gray-400 mt-1">Nothing logged on this day</p>
+          </div>
+        )}
+      </div>
     );
 
     if (inline) {
       return (
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm overflow-hidden min-h-[400px]">
-          {dayDetailContent}
+        <div className="max-w-2xl mx-auto rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="p-5">{dayDetailContent}</div>
         </div>
       );
     }
@@ -234,7 +272,6 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
           <CalendarDays className="size-3.5" />
           Calendar
         </button>
-
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setSelectedDay(null); }}>
           <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden">
             <DialogHeader className="px-5 pt-4 pb-0">
@@ -257,173 +294,194 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
     );
   }
 
-  // ── Calendar month view ──────────────────────────────────────────────────
+  // ── Calendar month view ───────────────────────────────────────────────────
+  const calendarNav = (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={prevMonth}
+        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+      >
+        <ChevronLeft className="size-4" />
+      </button>
+      <button
+        onClick={() => { setYear(now.getFullYear()); setMonth(now.getMonth() + 1); }}
+        className="min-w-[120px] text-center text-sm font-semibold text-gray-800 hover:text-[#1E6B4E] transition-colors px-2 flex items-center justify-center gap-1.5"
+      >
+        {MONTHS[month - 1]} {year}
+        {loading && (
+          <span className="h-3 w-3 animate-spin rounded-full border border-gray-300 border-t-[#1E6B4E] inline-block" />
+        )}
+      </button>
+      <button
+        onClick={nextMonth}
+        disabled={isAtCurrentMonth}
+        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+      >
+        <ChevronRight className="size-4" />
+      </button>
+    </div>
+  );
+
   const monthViewContent = (
     <div className={cn(inline ? "p-5" : "px-5 pb-5 pt-2")}>
       {inline && (
         <div className="flex items-center justify-between mb-5">
-          <h3 className="text-base font-semibold text-gray-900">
-            Spending Calendar
-          </h3>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={prevMonth}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
-            >
-              <ChevronLeft className="size-4" />
-            </button>
-            <button
-              onClick={() => { setYear(now.getFullYear()); setMonth(now.getMonth() + 1); }}
-              className="min-w-[110px] text-center text-sm font-semibold text-gray-800 hover:text-[#1E6B4E] transition-colors px-1 flex items-center justify-center gap-1.5"
-            >
-              {MONTHS[month - 1]} {year}
-              {loading && (
-                <span className="h-3 w-3 animate-spin rounded-full border border-gray-300 border-t-[#1E6B4E] inline-block" />
-              )}
-            </button>
-            <button
-              onClick={nextMonth}
-              disabled={isAtCurrentMonth}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="size-4" />
-            </button>
+          <h3 className="text-base font-semibold text-gray-900">Spending Calendar</h3>
+          {calendarNav}
+        </div>
+      )}
+
+      {/* Monthly summary strip — dialog only */}
+      {!inline && (
+        <div className="flex gap-0 mb-3 rounded-xl overflow-hidden border border-gray-100">
+          <div className="flex-1 bg-green-50 px-3 py-2 text-center">
+            <p className="text-[10px] text-green-600 font-medium uppercase tracking-wide">Income</p>
+            <p className="text-sm font-bold text-green-700 tabular-nums">₹{monthIncome.toLocaleString("en-IN")}</p>
+          </div>
+          <div className="w-px bg-gray-100" />
+          <div className="flex-1 bg-red-50 px-3 py-2 text-center">
+            <p className="text-[10px] text-red-600 font-medium uppercase tracking-wide">Expenses</p>
+            <p className="text-sm font-bold text-red-700 tabular-nums">₹{monthExpense.toLocaleString("en-IN")}</p>
+          </div>
+          <div className="w-px bg-gray-100" />
+          <div className={cn("flex-1 px-3 py-2 text-center", monthIncome - monthExpense >= 0 ? "bg-[#1E6B4E]/5" : "bg-orange-50")}>
+            <p className={cn("text-[10px] font-medium uppercase tracking-wide", monthIncome - monthExpense >= 0 ? "text-[#1E6B4E]" : "text-orange-600")}>Net</p>
+            <p className={cn("text-sm font-bold tabular-nums", monthIncome - monthExpense >= 0 ? "text-[#1E6B4E]" : "text-orange-700")}>
+              {monthIncome - monthExpense >= 0 ? "+" : ""}₹{Math.abs(monthIncome - monthExpense).toLocaleString("en-IN")}
+            </p>
           </div>
         </div>
       )}
 
-      {/* Monthly summary strip */}
-      {!inline && (
-        <div className="flex gap-0 mb-3 rounded-xl overflow-hidden border border-gray-100">
-
-
-            <div className="flex-1 bg-green-50 px-3 py-2 text-center">
-              <p className="text-[10px] text-green-600 font-medium uppercase tracking-wide">Income</p>
-              <p className="text-sm font-bold text-green-700 tabular-nums">
-                ₹{monthIncome.toLocaleString("en-IN")}
-              </p>
+      {/* ── Calendar grid ─────────────────────────────────────────────── */}
+      <div className="rounded-xl border border-gray-100 overflow-hidden">
+        {/* Day-of-week header row */}
+        <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-100">
+          {DAYS_SHORT.map((d, i) => (
+            <div
+              key={d}
+              className={cn(
+                "py-2 text-center text-[10px] font-semibold uppercase tracking-wide border-r border-gray-100 last:border-r-0",
+                i === 0 ? "text-red-400" : i === 6 ? "text-[#1E6B4E]" : "text-gray-400"
+              )}
+            >
+              {d}
             </div>
-            <div className="w-px bg-gray-100" />
-            <div className="flex-1 bg-red-50 px-3 py-2 text-center">
-              <p className="text-[10px] text-red-600 font-medium uppercase tracking-wide">Expenses</p>
-              <p className="text-sm font-bold text-red-700 tabular-nums">
-                ₹{monthExpense.toLocaleString("en-IN")}
-              </p>
-            </div>
-            <div className="w-px bg-gray-100" />
-            <div className={cn(
-              "flex-1 px-3 py-2 text-center",
-              monthIncome - monthExpense >= 0 ? "bg-[#1E6B4E]/5" : "bg-orange-50"
-            )}>
-              <p className={cn(
-                "text-[10px] font-medium uppercase tracking-wide",
-                monthIncome - monthExpense >= 0 ? "text-[#1E6B4E]" : "text-orange-600"
-              )}>Net</p>
-              <p className={cn(
-                "text-sm font-bold tabular-nums",
-                monthIncome - monthExpense >= 0 ? "text-[#1E6B4E]" : "text-orange-700"
-              )}>
-                {monthIncome - monthExpense >= 0 ? "+" : ""}₹{Math.abs(monthIncome - monthExpense).toLocaleString("en-IN")}
-              </p>
-            </div>
-          </div>
-        )}
+          ))}
+        </div>
 
-      {/* Calendar grid */}
-      <div>
-        {/* Day headers */}
-            <div className="grid grid-cols-7 mb-1">
-              {DAYS_SHORT.map((d, i) => (
+        {/* Date cells */}
+        <div className="grid grid-cols-7">
+          {cells.map((day, idx) => {
+            const isLastRow = idx >= cells.length - 7;
+            const isSunday = idx % 7 === 0;
+            const isSaturday = idx % 7 === 6;
+
+            if (!day) {
+              return (
                 <div
-                  key={d}
+                  key={`empty-${idx}`}
                   className={cn(
-                    "text-center text-[10px] font-semibold uppercase tracking-wide py-1",
-                    i === 0 ? "text-red-400" : i === 6 ? "text-[#1E6B4E]" : "text-gray-400"
+                    "min-h-[76px] border-r border-b border-gray-100 bg-gray-50/40",
+                    isSaturday && "border-r-0",
+                    isLastRow && "border-b-0"
+                  )}
+                />
+              );
+            }
+
+            const dateKey = `${year}-${pad(month)}-${pad(day)}`;
+            const info = dayData[dateKey];
+            const isToday =
+              day === now.getDate() &&
+              month === now.getMonth() + 1 &&
+              year === now.getFullYear();
+            const hasExpense = !!(info && info.expense > 0);
+            const hasIncome = !!(info && info.income > 0);
+            const hasBoth = hasExpense && hasIncome;
+            const hasData = hasExpense || hasIncome;
+
+            return (
+              <div
+                key={dateKey}
+                onClick={() => handleDayClick(day)}
+                onMouseEnter={() => handleDayHover(day)}
+                className={cn(
+                  "relative min-h-[76px] flex flex-col p-2 cursor-pointer transition-colors border-r border-b border-gray-100",
+                  isSaturday && "border-r-0",
+                  isLastRow && "border-b-0",
+                  isToday
+                    ? "bg-[#1E6B4E]/[0.04]"
+                    : hasBoth
+                      ? "hover:bg-gray-50/80"
+                      : hasExpense
+                        ? "bg-red-50/30 hover:bg-red-50/60"
+                        : hasIncome
+                          ? "bg-green-50/30 hover:bg-green-50/60"
+                          : "hover:bg-gray-50/60"
+                )}
+              >
+                {/* Today indicator — ring inset */}
+                {isToday && (
+                  <div className="absolute inset-0 ring-inset ring-1 ring-[#1E6B4E]/25 pointer-events-none rounded-none" />
+                )}
+
+                {/* Date number — top-left */}
+                <span
+                  className={cn(
+                    "inline-flex h-6 w-6 items-center justify-center rounded-full text-sm font-semibold leading-none self-start shrink-0",
+                    isToday
+                      ? "bg-[#1E6B4E] text-white text-xs font-bold"
+                      : isSunday
+                        ? "text-red-400"
+                        : isSaturday
+                          ? "text-[#1E6B4E]"
+                          : "text-gray-700"
                   )}
                 >
-                  {d}
-                </div>
-              ))}
-            </div>
+                  {day}
+                </span>
 
-            <div className="grid grid-cols-7 gap-0.5">
-              {cells.map((day, idx) => {
-                if (!day) {
-                  return <div key={`empty-${idx}`} className="aspect-square" />;
-                }
-                const dateKey = `${year}-${pad(month)}-${pad(day)}`;
-                const info = dayData[dateKey];
-                const isToday =
-                  day === now.getDate() &&
-                  month === now.getMonth() + 1 &&
-                  year === now.getFullYear();
-                const hasExpense = info && info.expense > 0;
-                const hasIncome = info && info.income > 0;
-                const hasBoth = hasExpense && hasIncome;
-                const hasData = hasExpense || hasIncome;
-                const net = info ? info.income - info.expense : 0;
-
-                return (
-                  <div
-                    key={dateKey}
-                    onClick={() => handleDayClick(day)}
-                    className={cn(
-                      "aspect-square flex flex-col items-center justify-center rounded-lg text-center transition-all",
-                      hasData ? "cursor-pointer" : "cursor-default",
-                      isToday
-                        ? "ring-2 ring-[#1E6B4E]"
-                        : hasBoth
-                          ? "bg-gradient-to-b from-green-50 to-red-50 hover:from-green-100 hover:to-red-100"
-                          : hasExpense
-                            ? "bg-red-50 hover:bg-red-100"
-                            : hasIncome
-                              ? "bg-green-50 hover:bg-green-100"
-                              : "hover:bg-gray-50"
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "text-[11px] font-semibold leading-none",
-                        isToday
-                          ? "text-[#1E6B4E] font-bold"
-                          : idx % 7 === 0
-                            ? "text-red-400"
-                            : idx % 7 === 6
-                              ? "text-[#1E6B4E]"
-                              : "text-gray-700"
-                      )}
-                    >
-                      {day}
-                    </span>
+                {/* Amounts — centered in remaining cell height */}
+                {hasData && (
+                  <div className="flex-1 flex flex-col items-center justify-center gap-0.5">
                     {hasIncome && (
-                      <span className="text-[9px] font-bold leading-none mt-0.5 tabular-nums text-green-600">
+                      <span className="text-[10px] font-bold leading-none tabular-nums text-green-600">
                         +{formatCompact(info!.income)}
                       </span>
                     )}
                     {hasExpense && (
-                      <span className="text-[9px] font-bold leading-none mt-0.5 tabular-nums text-red-500">
+                      <span className="text-[10px] font-bold leading-none tabular-nums text-red-500">
                         -{formatCompact(info!.expense)}
                       </span>
                     )}
                   </div>
-                );
-              })}
-            </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
-        {/* Legend */}
-        <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t border-gray-100">
-          <div className="flex items-center gap-1.5">
-            <div className="h-2.5 w-2.5 rounded bg-green-100 border border-green-200" />
-            <span className="text-[10px] text-gray-500">Income</span>
+      {/* Legend */}
+      <div className="flex items-center justify-center gap-5 mt-3">
+        <div className="flex items-center gap-1.5">
+          <div className="h-2.5 w-2.5 rounded-sm bg-green-100 border border-green-200" />
+          <span className="text-[10px] text-gray-400">Income</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="h-2.5 w-2.5 rounded-sm bg-red-100 border border-red-200" />
+          <span className="text-[10px] text-gray-400">Expense</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="h-4 w-4 rounded-full bg-[#1E6B4E] flex items-center justify-center">
+            <span className="text-[7px] text-white font-bold leading-none">{now.getDate()}</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="h-2.5 w-2.5 rounded bg-red-100 border border-red-200" />
-            <span className="text-[10px] text-gray-500">Expense</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="h-2.5 w-2.5 rounded border-2 border-[#1E6B4E]" />
-            <span className="text-[10px] text-gray-500">Today</span>
-          </div>
+          <span className="text-[10px] text-gray-400">Today</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <CalendarDays className="h-3 w-3 text-gray-300" />
+          <span className="text-[10px] text-gray-400">Tap any date</span>
         </div>
       </div>
     </div>
@@ -431,7 +489,7 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
 
   if (inline) {
     return (
-      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden min-h-[400px]">
+      <div className="max-w-2xl mx-auto rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         {monthViewContent}
       </div>
     );
@@ -455,30 +513,7 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
               <DialogTitle className="text-base font-semibold text-gray-900">
                 Spending Calendar
               </DialogTitle>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={prevMonth}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
-                >
-                  <ChevronLeft className="size-4" />
-                </button>
-                <button
-                  onClick={() => { setYear(now.getFullYear()); setMonth(now.getMonth() + 1); }}
-                  className="min-w-[120px] text-center text-sm font-semibold text-gray-800 hover:text-[#1E6B4E] transition-colors px-2 flex items-center justify-center gap-1.5"
-                >
-                  {MONTHS[month - 1]} {year}
-                  {loading && (
-                    <span className="h-3 w-3 animate-spin rounded-full border border-gray-300 border-t-[#1E6B4E] inline-block" />
-                  )}
-                </button>
-                <button
-                  onClick={nextMonth}
-                  disabled={isAtCurrentMonth}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight className="size-4" />
-                </button>
-              </div>
+              {calendarNav}
             </div>
           </DialogHeader>
           {monthViewContent}

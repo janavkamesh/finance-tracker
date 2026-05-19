@@ -2306,3 +2306,104 @@ Strategic layout and component update to improve visual density, form usability,
 #### Bug 3 — Distracting "Syncing…" Indicator
 **Root cause**: `isPending` from `useTransition` (used to silence the loading skeleton) was also rendered as a visible spinning indicator next to the export menu on every period/category/search navigation.
 **Fix**: Removed the `{isPending && <span>Syncing…</span>}` block and the `opacity-90` / `data-pending` dimming entirely from `TransactionFilters`. Navigation transitions are now completely silent — the list updates when the server data arrives with no intermediate visual noise.
+
+---
+
+## Phase 82 — Typography System & Consistent Sticky Page Headers
+
+### Typography Upgrade — Space Grotesk + Inter
+
+Replaced the generic Geist font stack with a purpose-built two-font system:
+
+| Role | Font | Reason |
+|---|---|---|
+| Headings (h1–h3, page titles, card headings) | **Space Grotesk** | Geometric grotesque with distinct character shapes — gives FinTrack a modern, tech-forward identity without sacrificing professionalism |
+| Body, data, labels, inputs, buttons | **Inter** | Designed for screen interfaces; supports `tnum` (tabular lining figures) so all ₹ amounts align perfectly in columns |
+
+**Files changed**: `app/layout.tsx`, `app/globals.css`
+
+- `next/font/google` loads both fonts with weights 400/500/600/700 and `display: swap`
+- CSS variables `--font-inter` and `--font-space-grotesk` registered on `<html>`
+- `@theme inline` updated: `--font-sans → var(--font-inter)`, `--font-heading → var(--font-space-grotesk)`
+- Typography scale variables added to `:root` (sizes, weights, line heights, letter spacing)
+- Unlayered CSS rules (outside `@layer`, so they beat Tailwind utilities) enforce Space Grotesk on all `h1/h2/h3` elements with negative letter-spacing
+- Global `tabular-nums` catch-all targets `.tabular-nums` and any class containing `amount`, `income`, `expense`, `budget`, `kpi` — ensures `font-variant-numeric: tabular-nums lining-nums` and `font-feature-settings: "tnum" 1, "lnum" 1` on every financial figure
+
+### Consistent Sticky Page Headers — Goals, Insights, Settings
+
+**Problem**: Home and Transactions pages had a sticky `h-[88px]` header bar with the page title and subtitle. Goals, Insights, and Settings pages had their headings inside `<main>` — no sticky bar, inconsistent visual hierarchy across the app.
+
+**Fix**: Added the identical sticky header pattern to all three pages:
+
+```tsx
+<div className="sticky top-14 md:top-0 z-10 bg-white border-b border-gray-100 h-[88px] px-6 md:px-8 flex items-center justify-between gap-4">
+  <div className="flex-1 min-w-0">
+    <h1 className="text-xl font-bold text-gray-900">{title}</h1>
+    <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>
+  </div>
+  {/* page-specific right-side action (YearSelector for Insights) */}
+</div>
+```
+
+- **Goals & Planning** — title + subtitle in sticky bar; content `max-w-3xl` centering preserved inside `<main>`
+- **Insights** — title + subtitle in sticky bar; `YearSelector` (year navigation) promoted to the sticky bar's right side, replacing the previous inline flex header
+- **Settings** — title + subtitle in sticky bar; content `max-w-3xl` centering preserved inside `<main>`
+
+All pages now share the same 88 px sticky header height, matching the sidebar brand section height so the bottom border runs flush across the sidebar/main seam on all routes.
+
+---
+
+## Phase 83 — KPI Card Parity & Delta Format Unification
+
+### Problem
+Home and Transactions pages both showed Income / Expenses / Net savings stat cards but had two visual inconsistencies:
+1. **Different card heights**: Home used `py-1` (very shallow) while Transactions used `py-3` — same information, different visual weight
+2. **Delta format mismatch**: Transactions showed percentage deltas (`↑ 393%`, `↑ 1136%`) while Home showed compact INR amounts (`↑ ₹13.7K`) — the same underlying comparison, two different languages
+3. **Income delta missing**: `computeDelta` returned `null` whenever the previous period had zero income (first month of use), so the Income card showed no delta even when it clearly should
+4. **4th card redundancy**: Home had a "Transactions" count card that added noise without financial signal; the number is already visible in the Transactions page header subtitle
+5. **Label inconsistency**: Transactions page showed "Net" — Home showed "Net savings"
+
+### Changes
+
+**`app/(dashboard)/dashboard/page.tsx`**
+- Removed the `Transactions` entry from `summaryCards` (4th card)
+- Removed the now-unused `prevTxnCount` variable
+- Changed grid: `grid-cols-2 lg:grid-cols-4` → `grid-cols-3` (3-column, matches Transactions)
+- Changed card padding: `py-1` → `py-3` (matches Transactions exactly)
+
+**`app/(dashboard)/transactions/page.tsx`**
+- Replaced percentage-based `computeDelta` with compact INR delta (same logic as Home's `compactINR` + `delta`)
+- Fixed zero-previous edge case: when previous period had no income (e.g. first month), now shows `↑ ₹53.5K` instead of nothing
+- Renamed "Net" label → "Net savings" for label consistency across pages
+
+### Result
+Both pages now render identical card chrome (`rounded-xl border border-gray-100 bg-white px-4 py-3`), identical delta format (`↑ ₹13.7K`), and identical labels — a user switching between Home and Transactions sees the same three cards with the same visual weight and the same data language.
+
+---
+
+## Phase 84 — Spending Calendar Redesign
+
+**File**: `components/transactions/transaction-calendar.tsx`
+
+### Problems fixed
+
+| Problem | Fix |
+|---|---|
+| Calendar filled full content width — cells were `aspect-square` so rows were very tall | Constrained inline calendar to `max-w-2xl mx-auto` (~672 px, ~70% of 960 px main area); all 30+ dates visible without scrolling |
+| No visible grid — cells used `gap-0.5` with no borders | Replaced with border-based grid: outer `rounded-xl border border-gray-100`, each cell has `border-r border-b border-gray-100`, last column and last row borders removed cleanly |
+| Date number was `text-[11px]` centered in cell | Date moved to **top-left** (UX standard: Google/Apple Calendar); rendered as `h-6 w-6` circle (filled green for today) at `text-sm font-semibold`; amounts centered in remaining cell height |
+| Clicking an empty date did nothing | All dates are now clickable; empty dates show "No transactions" empty state instantly (no fetch) |
+| Day detail required a server round-trip on every click | Added `dayDetailCacheRef` — fetched transactions are cached client-side so repeated clicks are instant |
+| No hover prefetch | `handleDayHover` fires `fetchDayDetail` on mouse-enter for dates with data — by the time the user clicks, the fetch is often already cached |
+| Day detail panel felt slow to appear | `setSelectedDay` is called before any await; panel renders immediately. Empty dates skip the fetch entirely. Cached results return synchronously |
+
+### Calendar cell layout
+```
+┌─────────────────────┐
+│ 14                  │  ← date, top-left, larger
+│                     │
+│    +12.5K           │  ← income (green), centered
+│     -3.2K           │  ← expense (red), centered
+└─────────────────────┘
+```
+Today's date shows as a filled green circle (`bg-[#1E6B4E] text-white`). Sunday dates are red, Saturday dates are green — matching day-header colours.

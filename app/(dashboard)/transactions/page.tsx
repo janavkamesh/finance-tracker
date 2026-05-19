@@ -90,10 +90,19 @@ function getPreviousDateRange(period: string): { start: string; end?: string } |
   return null;
 }
 
+function compactINR(value: number) {
+  const abs = Math.abs(value);
+  if (abs >= 10_000_000) return `₹${(value / 10_000_000).toFixed(1)}Cr`;
+  if (abs >= 100_000)    return `₹${(value / 100_000).toFixed(1)}L`;
+  if (abs >= 1_000)      return `₹${(value / 1_000).toFixed(1)}K`;
+  return `₹${value.toLocaleString("en-IN")}`;
+}
+
 function computeDelta(current: number, previous: number) {
-  if (previous === 0 || current === previous) return null;
-  const pct = ((current - previous) / Math.abs(previous)) * 100;
-  return { up: pct > 0, label: `${Math.abs(pct).toFixed(0)}%` };
+  if (current === previous) return null;
+  if (previous === 0) return current > 0 ? { up: true, label: compactINR(current) } : null;
+  const diff = current - previous;
+  return { up: diff > 0, label: compactINR(Math.abs(diff)) };
 }
 
 export default async function TransactionsPage({
@@ -237,7 +246,7 @@ export default async function TransactionsPage({
           <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
             <div className="flex items-center gap-2 mb-1.5">
               <span className={`h-2 w-2 rounded-full ${net >= 0 ? "bg-green-500" : "bg-red-500"}`} />
-              <span className="text-xs text-gray-500">Net</span>
+              <span className="text-xs text-gray-500">Net savings</span>
             </div>
             <div className="flex items-baseline gap-2">
               <p className={`text-lg font-bold tabular-nums ${net >= 0 ? "text-green-600" : "text-red-600"}`}>

@@ -117,7 +117,6 @@ export default async function DashboardPage() {
   const prevIncome = prevMonthTxns.filter((t) => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
   const prevExpense = prevMonthTxns.filter((t) => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
   const prevNet = prevIncome - prevExpense;
-  const prevTxnCount = prevMonthTxns.length;
 
   // ── Monthly bar chart data (last 6 months) ────────────────────────
   const monthlyData: MonthlyData[] = Array.from({ length: 6 }, (_, i) => {
@@ -284,16 +283,6 @@ export default async function DashboardPage() {
       dot: monthNet >= 0 ? "bg-green-500" : "bg-red-500",
       delta: delta(monthNet, prevNet),
     },
-    {
-      label: "Transactions",
-      value: String(monthTxnCount),
-      color: "text-gray-900",
-      dot: "bg-[#1E6B4E]",
-      delta: prevTxnCount > 0 && monthTxnCount !== prevTxnCount ? {
-        label: String(Math.abs(monthTxnCount - prevTxnCount)),
-        up: monthTxnCount > prevTxnCount,
-      } : null,
-    },
   ];
 
   const currentMonthLabel = `${MONTH_LABELS[thisMonth - 1]} ${thisYear}`;
@@ -314,11 +303,11 @@ export default async function DashboardPage() {
 
     <main className="px-6 md:px-8 pb-8 pt-4">
       {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 mb-4">
+      <div className="grid grid-cols-3 gap-3 mb-4">
         {summaryCards.map((card) => (
           <div
             key={card.label}
-            className="rounded-xl border border-gray-100 bg-white px-4 py-1"
+            className="rounded-xl border border-gray-100 bg-white px-4 py-3"
           >
             <div className="flex items-center gap-2 mb-1.5">
               <span className={`h-2 w-2 rounded-full ${card.dot}`} />

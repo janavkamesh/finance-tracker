@@ -55,15 +55,19 @@ export default async function SettingsPage() {
   const customCats = (categories ?? []).filter((c) => !c.is_system) as Category[];
 
   return (
-    <main className="p-6 md:p-8">
-      <div className="mx-auto w-full max-w-3xl space-y-6">
-        <div>
+    <>
+      {/* Sticky header — matches Home & Transactions */}
+      <div className="sticky top-14 md:top-0 z-10 bg-white border-b border-gray-100 h-[88px] px-6 md:px-8 flex items-center justify-between gap-4">
+        <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold text-gray-900">Settings</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Manage your profile, preferences, and account data.
           </p>
         </div>
+      </div>
 
+    <main className="px-6 md:px-8 pb-8 pt-4">
+      <div className="mx-auto w-full max-w-3xl space-y-6">
         {/* ── Profile ────────────────────────────────────────────────── */}
         <section className="rounded-2xl border border-gray-100 bg-white p-6">
           <div className="mb-4">
@@ -178,5 +182,6 @@ export default async function SettingsPage() {
         </section>
       </div>
     </main>
+    </>
   );
 }

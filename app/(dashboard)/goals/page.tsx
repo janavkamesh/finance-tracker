@@ -89,16 +89,19 @@ export default async function GoalsPage() {
   const headerClass = "flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-50";
 
   return (
-    <main className="p-6 md:p-8">
-      <div className="mx-auto w-full max-w-3xl space-y-8">
-        {/* Page header */}
-        <div>
+    <>
+      {/* Sticky header — matches Home & Transactions */}
+      <div className="sticky top-14 md:top-0 z-10 bg-white border-b border-gray-100 h-[88px] px-6 md:px-8 flex items-center justify-between gap-4">
+        <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold text-gray-900">Goals &amp; Planning</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Track savings goals, manage recurring bills, and watch your net worth grow.
           </p>
         </div>
+      </div>
 
+    <main className="px-6 md:px-8 pb-8 pt-4">
+      <div className="mx-auto w-full max-w-3xl space-y-8">
         {/* ── 1. Financial Goals ─────────────────────────────────── */}
         <section className={cardClass}>
           <div className={headerClass}>
@@ -440,5 +443,6 @@ export default async function GoalsPage() {
         </section>
       </div>
     </main>
+    </>
   );
 }
