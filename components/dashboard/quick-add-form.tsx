@@ -5,7 +5,8 @@ import { Zap } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { quickAddExpense } from "@/actions/quick-add";
-
+import { CustomSelect, type SelectOption } from "@/components/ui/custom-select";
+import { getCategoryIcon } from "@/lib/category-icons";
 interface Category {
   id: string;
   name: string;
@@ -22,6 +23,15 @@ export function QuickAddForm({ categories }: Props) {
   const expenseCats = categories.filter(
     (c) => c.type === "expense" || c.type === "both"
   );
+
+  const categoryOptions: SelectOption[] = expenseCats.map((c) => {
+    const Icon = getCategoryIcon(c);
+    return {
+      label: c.name,
+      value: c.id,
+      icon: <Icon className="size-3.5" style={{ color: c.color ?? "#6b7280" }} />,
+    };
+  });
 
   const [amount, setAmount] = useState("");
   const [categoryId, setCategoryId] = useState(expenseCats[0]?.id ?? "");
@@ -117,20 +127,12 @@ export function QuickAddForm({ categories }: Props) {
           </div>
 
           {/* Category */}
-          <select
+          <CustomSelect
+            options={categoryOptions}
             value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className={cn(
-              "h-9 sm:w-40 rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-700",
-              "focus:outline-none focus:ring-2 focus:ring-[#1E6B4E]/30 focus:border-[#1E6B4E] transition-colors"
-            )}
-          >
-            {expenseCats.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+            onChange={setCategoryId}
+            className="w-full sm:w-40 [&>button]:bg-gray-50"
+          />
 
           {/* Description */}
           <input

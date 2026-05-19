@@ -1897,3 +1897,16 @@ snapshot values → instant feedback → background commit → rollback on failu
   - `onOptimisticSave={(newBase) => setOptimisticBudget(newBase + rolloverAmount)}`
   - `onOptimisticRollback={() => setOptimisticBudget(null)}`
 - `optimisticBudget` self-corrects to `null` once `revalidatePath` (triggered inside `updateBudget`) causes the Next.js server component to re-render and push fresh `budget` prop — no explicit cleanup needed.
+
+---
+
+## Phase 55 — Quick Add Dropdown UI Standardization
+
+### Feature
+Replaced the native HTML `<select>` element in the Dashboard "Quick add" form with the premium `CustomSelect` component to maintain visual consistency across the application.
+
+### UX Design & Changes
+- Integrates category vector icons alongside text, perfectly matching the style established in the Transactions filter bar.
+- Replaces harsh default OS blue highlights with the app's custom soft gray hover states.
+- Applies custom background styling (`bg-gray-50`) to the dropdown trigger so it seamlessly aligns with the adjacent "Amount" and "Note" input fields in the inline form.
+- Standardizes component usage across the platform, improving the "premium" feel.
