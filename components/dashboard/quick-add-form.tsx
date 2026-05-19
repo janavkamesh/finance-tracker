@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Zap } from "lucide-react";
+import { Zap, Banknote, Smartphone, CreditCard, Building2, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { quickAddExpense } from "@/actions/quick-add";
@@ -40,8 +40,17 @@ export function QuickAddForm({ categories }: Props) {
     };
   });
 
+  const paymentOptions: SelectOption[] = [
+    { label: "UPI",         value: "upi",         icon: <Smartphone className="size-3.5 text-gray-500" /> },
+    { label: "Cash",        value: "cash",        icon: <Banknote className="size-3.5 text-gray-500" /> },
+    { label: "Card",        value: "card",        icon: <CreditCard className="size-3.5 text-gray-500" /> },
+    { label: "Net Banking", value: "net_banking", icon: <Building2 className="size-3.5 text-gray-500" /> },
+    { label: "Wallet",      value: "wallet",      icon: <Wallet className="size-3.5 text-gray-500" /> },
+  ];
+
   const [amount, setAmount] = useState("");
   const [categoryId, setCategoryId] = useState(expenseCats[0]?.id ?? "");
+  const [paymentMethod, setPaymentMethod] = useState<string>("upi");
   const [description, setDescription] = useState("");
   const amountRef = useRef<HTMLInputElement>(null);
 
@@ -54,6 +63,7 @@ export function QuickAddForm({ categories }: Props) {
     const snap = {
       amount,
       categoryId,
+      paymentMethod,
       description,
     };
 
@@ -72,6 +82,7 @@ export function QuickAddForm({ categories }: Props) {
       amount: snap.amount,
       category_id: snap.categoryId,
       description: snap.description,
+      payment_method: snap.paymentMethod || undefined,
     })
       .then((result) => {
         if (result?.error) {
@@ -141,6 +152,14 @@ export function QuickAddForm({ categories }: Props) {
             className="w-full sm:w-40 [&>button]:bg-gray-50"
           />
 
+          {/* Payment method */}
+          <CustomSelect
+            options={paymentOptions}
+            value={paymentMethod}
+            onChange={setPaymentMethod}
+            className="w-full sm:w-36 [&>button]:bg-gray-50"
+          />
+
           {/* Description */}
           <input
             type="text"
@@ -163,8 +182,9 @@ export function QuickAddForm({ categories }: Props) {
             type="submit"
             disabled={!amount.trim()}
             className={cn(
-              "h-9 shrink-0 rounded-lg border border-gray-200 bg-gray-100 px-5 text-sm font-semibold text-gray-700",
-              "transition-colors hover:bg-gray-200 hover:text-gray-900 active:scale-[0.98]",
+              "h-9 shrink-0 rounded-lg border border-[#1E6B4E]/25 bg-white px-5 text-sm font-semibold text-[#1E6B4E] shadow-sm",
+              "transition-all hover:border-[#1E6B4E]/50 hover:bg-[#1E6B4E]/5 active:scale-[0.98]",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E6B4E]/40",
               "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
           >

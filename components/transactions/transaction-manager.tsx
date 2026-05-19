@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import { List, CalendarDays, CheckSquare, X } from "lucide-react";
 import { TransactionFilters } from "./transaction-filters";
 import { TransactionDialog } from "./transaction-dialog";
 import { DeleteTransactionButton } from "./delete-transaction-button";
@@ -9,6 +10,14 @@ import { BulkActionsBar } from "./bulk-actions-bar";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { formatINR, cn } from "@/lib/utils";
 import { fetchTransactionsBatch } from "@/app/actions/transactions";
+
+const PAYMENT_LABELS: Record<string, string> = {
+  cash: "Cash",
+  upi: "UPI",
+  card: "Card",
+  net_banking: "Net Banking",
+  wallet: "Wallet",
+};
 
 interface TxnRow {
   id: string;
@@ -69,6 +78,10 @@ const TYPE_TABS = [
 export function TransactionManager({ initialTransactions, categories, activeMonth, filters }: Props) {
   // ── Selection state ───────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectionMode, setSelectionMode] = useState(false);
+
+  // ── View toggle (List / Calendar) — UI only for now ───────────────
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
 
   // ── Type tab — client-side, zero latency ──────────────────────────
   const [typeTab, setTypeTab] = useState<"all" | "income" | "expense">("all");
@@ -239,7 +252,10 @@ export function TransactionManager({ initialTransactions, categories, activeMont
     setSelectedIds(new Set()); // clear selection when switching tabs
   }
 
-  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  }, []);
   const filterCats    = categories.map((c) => ({ id: c.id, name: c.name }));
   const selectedArray = Array.from(selectedIds);
 
@@ -316,6 +332,74 @@ export function TransactionManager({ initialTransactions, categories, activeMont
 
           {/* Row 2: Search / period / category / export filters */}
           <TransactionFilters categories={filterCats} showExportMenu />
+
+          {/* Row 3: Select toggle + View toggle (List / Calendar) */}
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setSelectionMode((s) => !s)}
+              className={cn(
+                "inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-sm font-semibold shadow-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E6B4E]/40",
+                selectionMode
+                  ? "border border-[#1E6B4E]/50 bg-[#1E6B4E]/5 text-[#1E6B4E]"
+                  : "border border-[#1E6B4E]/25 bg-white text-[#1E6B4E] hover:border-[#1E6B4E]/50 hover:bg-[#1E6B4E]/5"
+              )}
+              aria-pressed={selectionMode}
+            >
+              {selectionMode ? <X className="size-3.5" /> : <CheckSquare className="size-3.5" />}
+              {selectionMode ? "Cancel" : "Select"}
+            </button>
+
+            <div
+              className="inline-flex h-9 items-center rounded-lg border border-gray-200 bg-white p-0.5 shadow-sm"
+              role="tablist"
+              aria-label="Switch view"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === "list"}
+                onClick={() => setViewMode("list")}
+                className={cn(
+                  "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors",
+                  viewMode === "list"
+                    ? "bg-[#1E6B4E]/10 text-[#1E6B4E]"
+                    : "text-gray-500 hover:text-gray-700"
+                )}
+              >
+                <List className="size-3.5" />
+                List
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === "calendar"}
+                onClick={() => setViewMode("calendar")}
+                className={cn(
+                  "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors",
+                  viewMode === "calendar"
+                    ? "bg-[#1E6B4E]/10 text-[#1E6B4E]"
+                    : "text-gray-500 hover:text-gray-700"
+                )}
+              >
+                <CalendarDays className="size-3.5" />
+                Calendar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Calendar view placeholder (UI prepared for future) ──────── */}
+      {viewMode === "calendar" && displayedTransactions.length > 0 && (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white py-16 text-center px-6">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1E6B4E]/10 mb-4">
+            <CalendarDays className="h-6 w-6 text-[#1E6B4E]" />
+          </div>
+          <p className="text-sm font-semibold text-gray-900">Calendar view coming soon</p>
+          <p className="text-xs text-gray-500 mt-1 max-w-sm">
+            A full-page calendar with daily totals and drill-down is on the way. Switch back to List to continue managing transactions.
+          </p>
         </div>
       )}
 
@@ -332,22 +416,27 @@ export function TransactionManager({ initialTransactions, categories, activeMont
       )}
 
       {/* ── Transaction list ───────────────────────────────────────── */}
-      {displayedTransactions.length > 0 && (
-        <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden relative">
-          {/* Select-all header */}
-          <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-50 bg-gray-50/40 sticky top-0 z-10">
-            <input
-              type="checkbox"
-              checked={allSelected}
-              onChange={toggleAll}
-              className="h-4 w-4 rounded border-gray-300 accent-[#1E6B4E] cursor-pointer"
-              aria-label="Select all transactions"
-            />
-            <span className="text-xs text-gray-400 font-medium">
-              {someSelected
-                ? `${selectedIds.size} of ${displayedTransactions.length} selected`
-                : "Select all"}
-            </span>
+      {viewMode === "list" && displayedTransactions.length > 0 && (
+        <div className="w-full rounded-2xl border border-gray-100 bg-white overflow-hidden relative">
+          {/* List header — always shows the title; checkbox row only in selection mode */}
+          <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-gray-100 bg-white sticky top-0 z-10">
+            <div className="flex items-center gap-3 min-w-0">
+              {selectionMode && (
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleAll}
+                  className="h-4 w-4 rounded border-gray-300 accent-[#1E6B4E] cursor-pointer"
+                  aria-label="Select all transactions"
+                />
+              )}
+              <h2 className="text-sm font-semibold text-gray-900">All Transactions</h2>
+              <span className="text-xs text-gray-400 tabular-nums">
+                {selectionMode && someSelected
+                  ? `${selectedIds.size} of ${displayedTransactions.length} selected`
+                  : `${displayedTransactions.length} ${displayedTransactions.length === 1 ? "item" : "items"}`}
+              </span>
+            </div>
           </div>
 
           <div className="divide-y divide-gray-50">
@@ -369,76 +458,101 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                       ? getCategoryIcon({ name: txn.category_name, icon: txn.category_icon ?? undefined })
                       : null;
 
+                    const paymentLabel = txn.payment_method
+                      ? PAYMENT_LABELS[txn.payment_method] ?? null
+                      : null;
+
                     return (
                       <li
                         key={txn.id}
                         className={cn(
-                          "flex items-center gap-2.5 px-4 py-3 transition-colors group",
+                          "flex items-center gap-3 px-5 py-3 transition-colors group",
                           isSelected   ? "bg-[#1E6B4E]/5"  : "hover:bg-gray-50/60",
                           isOptimistic ? "opacity-70"       : ""
                         )}
                       >
-                        {/* Checkbox */}
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleOne(txn.id)}
-                          disabled={isOptimistic}
-                          className="h-4 w-4 rounded border-gray-300 accent-[#1E6B4E] cursor-pointer shrink-0"
-                          aria-label={`Select ${txn.description || txn.category_name || "transaction"}`}
-                        />
+                        {/* Checkbox — only when in selection mode */}
+                        {selectionMode && (
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleOne(txn.id)}
+                            disabled={isOptimistic}
+                            className="h-4 w-4 rounded border-gray-300 accent-[#1E6B4E] cursor-pointer shrink-0"
+                            aria-label={`Select ${txn.description || txn.category_name || "transaction"}`}
+                          />
+                        )}
 
-                        <div className={cn(
-                          "h-2 w-2 shrink-0 rounded-full",
-                          isIncome ? "bg-green-500" : "bg-red-500"
-                        )} />
-
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {txn.description || txn.category_name || "—"}
-                            {isOptimistic && (
-                              <span className="ml-1.5 text-[10px] text-gray-400 font-normal">saving…</span>
+                        {/* Left cluster — category icon chip + details (constrained width
+                            so the amount can sit close to it, not at the page edge) */}
+                        <div className="flex items-center gap-3 min-w-0 max-w-[520px] flex-1">
+                          <div
+                            className={cn(
+                              "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                              (!txn.category_user_id || !txn.category_color) && "bg-gray-100 text-gray-600"
                             )}
-                          </p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            {txn.category_name && (
-                              <span
-                                className={cn(
-                                  "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium",
-                                  (!txn.category_user_id || !txn.category_color) &&
-                                    "bg-gray-100 text-gray-700"
-                                )}
-                                style={
-                                  txn.category_user_id && txn.category_color
-                                    ? {
-                                        backgroundColor: `${txn.category_color}18`,
-                                        color: txn.category_color,
-                                      }
-                                    : undefined
-                                }
-                              >
-                                {Icon && <Icon className="size-3 shrink-0" />}
-                                {txn.category_name}
+                            style={
+                              txn.category_user_id && txn.category_color
+                                ? {
+                                    backgroundColor: `${txn.category_color}1f`,
+                                    color: txn.category_color,
+                                  }
+                                : undefined
+                            }
+                          >
+                            {Icon ? (
+                              <Icon className="size-4" />
+                            ) : (
+                              <span className={cn(
+                                "h-2 w-2 rounded-full",
+                                isIncome ? "bg-green-500" : "bg-red-500"
+                              )} />
+                            )}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {txn.description || txn.category_name || "—"}
+                              {isOptimistic && (
+                                <span className="ml-1.5 text-[10px] text-gray-400 font-normal">saving…</span>
+                              )}
+                            </p>
+                            <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
+                              {txn.category_name && (
+                                <span className="truncate">{txn.category_name}</span>
+                              )}
+                              <span aria-hidden className="text-gray-300">·</span>
+                              <span className="shrink-0">
+                                {new Date(txn.date + "T00:00:00").toLocaleDateString("en-IN", {
+                                  day: "numeric", month: "short", year: "numeric",
+                                })}
                               </span>
-                            )}
-                            <span className="text-xs text-gray-400">
-                              {new Date(txn.date + "T00:00:00").toLocaleDateString("en-IN", {
-                                day: "numeric", month: "short", year: "numeric",
-                              })}
-                            </span>
+                              {paymentLabel && (
+                                <>
+                                  <span aria-hidden className="text-gray-300">·</span>
+                                  <span className="inline-flex items-center rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600">
+                                    {paymentLabel}
+                                  </span>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
 
+                        {/* Amount — pulled inward, sits next to details */}
                         <span className={cn(
-                          "text-sm font-semibold tabular-nums shrink-0",
+                          "text-sm font-semibold tabular-nums shrink-0 min-w-[110px]",
                           isIncome ? "text-green-600" : "text-red-600"
                         )}>
                           {isIncome ? "+" : "-"}{formatINR(txn.amount)}
                         </span>
 
-                        {/* Edit / Delete — hidden for optimistic rows */}
+                        {/* Spacer pushes edit/delete to the far right edge */}
+                        <div className="flex-1" />
+
+                        {/* Edit / Delete — pinned far right */}
                         {!isOptimistic && (
-                          <div className="flex items-center gap-0.5">
+                          <div className="flex items-center gap-0.5 shrink-0">
                             <TransactionDialog
                               categories={categories}
                               transaction={{

@@ -135,10 +135,10 @@ export function RecurringDialog({ categories, recurring, triggerVariant = "prima
         <button
           onClick={() => setOpen(true)}
           className={cn(
-            "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors",
+            "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold",
             triggerVariant === "secondary"
-              ? "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-200"
-              : "bg-[#1E6B4E] text-white hover:bg-[#185c43] focus:outline-none focus:ring-2 focus:ring-[#1E6B4E]/50"
+              ? "border border-[#1E6B4E]/25 bg-white text-[#1E6B4E] shadow-sm transition-all hover:border-[#1E6B4E]/50 hover:bg-[#1E6B4E]/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E6B4E]/40"
+              : "bg-[#1E6B4E] text-white transition-colors hover:bg-[#185c43] focus:outline-none focus:ring-2 focus:ring-[#1E6B4E]/50"
           )}
         >
           <Plus className="size-4" />

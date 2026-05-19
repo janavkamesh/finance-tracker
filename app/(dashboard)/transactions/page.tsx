@@ -8,10 +8,7 @@ import { createClient, getUser } from "@/lib/supabase/server";
 import { formatINR } from "@/lib/utils";
 import { TransactionDialog } from "@/components/transactions/transaction-dialog";
 import { TransactionFilters } from "@/components/transactions/transaction-filters";
-import { TransactionCalendar } from "@/components/transactions/transaction-calendar";
 import { TransactionManager } from "@/components/transactions/transaction-manager";
-import { ActiveGoalsWidget } from "@/components/transactions/active-goals-widget";
-import { UpcomingBillsWidget } from "@/components/transactions/upcoming-bills-widget";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
@@ -95,28 +92,18 @@ function getPreviousDateRange(period: string): { start: string; end?: string } |
   return null;
 }
 
-function DeltaBadge({ current, previous, type }: { current: number; previous: number; type: "income" | "expense" | "net" }) {
+function DeltaBadge({ current, previous }: { current: number; previous: number; type?: "income" | "expense" | "net" }) {
   if (previous === 0) return null;
   const delta = ((current - previous) / Math.abs(previous)) * 100;
-  
   if (delta === 0) return null;
-  
-  const isPositive = delta > 0;
-  const isNegative = delta < 0;
-  
-  let isGood = false;
-  if (type === "income" || type === "net") isGood = isPositive;
-  if (type === "expense") isGood = isNegative;
-  
-  const colorClass = isGood ? "text-green-600" : "text-red-500";
-  const icon = isPositive ? "↑" : "↓";
-  
+
+  const icon = delta > 0 ? "↑" : "↓";
+
   return (
-    <div className="flex items-center gap-1 mt-1">
-       <span className={`text-xs font-medium ${colorClass}`}>
-         {icon} {Math.abs(delta).toFixed(0)}%
-       </span>
-       <span className="text-xs text-gray-400">vs last month</span>
+    <div className="mt-1">
+      <span className="text-xs font-medium text-gray-400 tabular-nums">
+        {icon} {Math.abs(delta).toFixed(0)}%
+      </span>
     </div>
   );
 }
@@ -224,7 +211,7 @@ export default async function TransactionsPage({
         <div className="flex items-center gap-2" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 lg:gap-8 items-start">
+      <div className="w-full">
         <div className="min-w-0">
           {/* Summary stats */}
       <div className="grid grid-cols-3 gap-3 mb-5">
@@ -314,7 +301,7 @@ export default async function TransactionsPage({
                 date: txn.date,
                 description: txn.description ?? "",
                 category_id: txn.category_id ?? "",
-                payment_method: null,
+                payment_method: (txn as Record<string, unknown>).payment_method as string | null ?? null,
                 category_name: cat?.name ?? null,
                 category_color: cat?.color ?? null,
                 category_icon: null,
@@ -332,13 +319,6 @@ export default async function TransactionsPage({
           />
         </Suspense>
       )}
-        </div>
-
-        {/* Right Column: Spending Calendar, Goals & Bills Widgets */}
-        <div className="lg:sticky lg:top-8 w-full flex flex-col">
-          <TransactionCalendar inline />
-          <ActiveGoalsWidget transactions={txns} />
-          <UpcomingBillsWidget categories={cats} activeMonth={activePeriodMonth} />
         </div>
       </div>
     </main>

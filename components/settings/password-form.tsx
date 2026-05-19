@@ -79,13 +79,15 @@ export function PasswordForm() {
           )}
         </div>
       </div>
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="rounded-lg bg-[#1E6B4E] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#185c43] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-      >
-        {isSubmitting ? "Changing…" : "Change password"}
-      </button>
+      <div className="flex justify-end">
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="rounded-lg bg-[#1E6B4E] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#185c43] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+        >
+          {isSubmitting ? "Changing…" : "Change password"}
+        </button>
+      </div>
     </form>
   );
 }
