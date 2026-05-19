@@ -1850,3 +1850,50 @@ Replaced `<select>` for category in the transaction dialog and recurring dialog 
 - `position` changed from `"top-right"` → `"bottom-right"` — away from all primary action areas
 - `offset={24}` — explicit 24 px clearance from both bottom and right viewport edges (Sonner's shorthand applies the value to both axes simultaneously)
 - `toastOptions.style.zIndex: 9999` — belt-and-suspenders above any Tailwind reset that could clobber Sonner's own `--z-index` CSS variable; sits above the mobile bottom nav (`z-50`) and sidebar elements
+
+---
+
+## Phase 54 — Optimistic UI: Quick Add + Monthly Budget Save
+
+**Problem:** Two high-frequency interactions still suffered "pessimistic" 2–3 s lag caused by awaiting the Supabase round-trip before giving visual feedback:
+1. **Quick Add form** — "Log" button was spinner-blocked until the server confirmed the insert.
+2. **Monthly Budget dialog** — modal stayed open with "Saving…" spinner until both `updateBudget` and `saveCategoryLimits` resolved.
+
+**Pattern applied — fire-and-forget with rollback:**
+```
+snapshot values → instant feedback → background commit → rollback on failure
+```
+
+### Quick Add (`components/dashboard/quick-add-form.tsx`)
+
+- Removed `useTransition` / `isPending` entirely.
+- `handleSubmit` now:
+  1. Snapshots `{ amount, categoryId, description }`.
+  2. Instantly clears the form and re-focuses the amount input (30 ms timeout).
+  3. Fires `toast.success("Expense logged ✓")` immediately — no waiting.
+  4. Calls `quickAddExpense(...)` in the background via a plain `.then().catch()` chain.
+  5. On `result.error` or `.catch()`: restores snapshot values + shows `toast.error(...)`.
+- Submit button `disabled={!amount.trim()}` only — never frozen while the server runs.
+- Button label always "Log" — no loading state copy.
+
+### Monthly Budget Save (`components/dashboard/budget-setup-dialog.tsx` + `budget-widget.tsx`)
+
+**`budget-setup-dialog.tsx`:**
+- Added `onOptimisticSave?: (newBudget: number) => void` and `onOptimisticRollback?: () => void` to `Props`.
+- `handleSave` converted from `async function` to a sync function with an IIFE for the background work:
+  1. Validates `budgetNum > 0` (only guard remaining).
+  2. Computes the category-limit diff synchronously before any state mutation.
+  3. Calls `setOpen(false)` + `onOptimisticSave(budgetNum)` — modal closes and parent updates instantly.
+  4. Fires `updateBudget` + `saveCategoryLimits` inside `(async () => { ... })().catch(...)`.
+  5. `.catch` calls `onOptimisticRollback?.()` + `toast.error(...)` — rolls back the widget display.
+  6. On success path: `toast.success("Budget saved!")` after both server calls complete.
+- Save button: `disabled={!budgetNum}` only — removed `loading` dependency; label always "Save budget".
+- `loading` state retained exclusively for the destructive `handleReset` (clear budget) flow.
+
+**`budget-widget.tsx`:**
+- Added `const [optimisticBudget, setOptimisticBudget] = useState<number | null>(null)`.
+- `const displayBudget = optimisticBudget ?? budget` — all calculations (`pct`, `remaining`, `over`, "of X" text, "over budget" text) derive from `displayBudget` so they react instantly.
+- Passes to `BudgetSetupDialog`:
+  - `onOptimisticSave={(newBase) => setOptimisticBudget(newBase + rolloverAmount)}`
+  - `onOptimisticRollback={() => setOptimisticBudget(null)}`
+- `optimisticBudget` self-corrects to `null` once `revalidatePath` (triggered inside `updateBudget`) causes the Next.js server component to re-render and push fresh `budget` prop — no explicit cleanup needed.

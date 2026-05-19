@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState } from "react";
 import { Zap } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -26,25 +26,53 @@ export function QuickAddForm({ categories }: Props) {
   const [amount, setAmount] = useState("");
   const [categoryId, setCategoryId] = useState(expenseCats[0]?.id ?? "");
   const [description, setDescription] = useState("");
-  const [isPending, startTransition] = useTransition();
   const amountRef = useRef<HTMLInputElement>(null);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!amount.trim() || !categoryId) return;
 
-    startTransition(async () => {
-      const result = await quickAddExpense({ amount, category_id: categoryId, description });
-      if (result?.error) {
-        toast.error(result.error);
-      } else {
-        toast.success("Expense logged ✓");
-        setAmount("");
-        setDescription("");
-        // Refocus amount for rapid back-to-back entry
-        setTimeout(() => amountRef.current?.focus(), 50);
-      }
-    });
+    // ── Optimistic UI ─────────────────────────────────────────────────────────
+    // Snapshot the values before clearing so we can rollback on failure.
+    const snap = {
+      amount,
+      categoryId,
+      description,
+    };
+
+    // 1. Instantly clear the form so the user can begin the next entry.
+    setAmount("");
+    setDescription("");
+    // Return focus to the amount field — enables rapid back-to-back entry.
+    setTimeout(() => amountRef.current?.focus(), 30);
+
+    // 2. Fire the success toast immediately — no waiting for the DB.
+    toast.success("Expense logged ✓");
+
+    // 3. Commit to Supabase in the background. No await here — the UI is
+    //    already updated. If the insert fails, we rollback and surface the error.
+    quickAddExpense({
+      amount: snap.amount,
+      category_id: snap.categoryId,
+      description: snap.description,
+    })
+      .then((result) => {
+        if (result?.error) {
+          // Server returned a validation/auth error — rollback.
+          setAmount(snap.amount);
+          setDescription(snap.description);
+          setCategoryId(snap.categoryId);
+          toast.error(`Couldn't save: ${result.error}`);
+        }
+        // Success path: revalidatePath inside quickAddExpense refreshes the list.
+      })
+      .catch(() => {
+        // Network / unexpected error — rollback.
+        setAmount(snap.amount);
+        setDescription(snap.description);
+        setCategoryId(snap.categoryId);
+        toast.error("Failed to save. Please try again.");
+      });
   }
 
   if (expenseCats.length === 0) return null;
@@ -118,17 +146,18 @@ export function QuickAddForm({ categories }: Props) {
             )}
           />
 
-          {/* Submit */}
+          {/* Submit — disabled only while amount is empty (natural guard),
+              NOT disabled while awaiting the server. */}
           <button
             type="submit"
-            disabled={isPending || !amount.trim()}
+            disabled={!amount.trim()}
             className={cn(
               "h-9 shrink-0 rounded-lg bg-[#1E6B4E] px-5 text-sm font-semibold text-white",
               "transition-colors hover:bg-[#165a41] active:scale-[0.98]",
               "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
           >
-            {isPending ? "Logging…" : "Log"}
+            Log
           </button>
         </div>
       </div>

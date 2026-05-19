@@ -28,6 +28,12 @@ interface Props {
    * Keyed by category ID, value is the monthly limit in INR.
    */
   categoryLimits?: Record<string, number>;
+  /**
+   * Optimistic UI callbacks — parent calls these to immediately reflect
+   * the new budget before the server round-trip completes.
+   */
+  onOptimisticSave?: (newBudget: number) => void;
+  onOptimisticRollback?: () => void;
 }
 
 interface CatBudgetRow {
@@ -93,6 +99,8 @@ export function BudgetSetupDialog({
   rolloverEnabled = false,
   categories = [],
   categoryLimits = {},
+  onOptimisticSave,
+  onOptimisticRollback,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [income, setIncome] = useState("");
@@ -187,33 +195,23 @@ export function BudgetSetupDialog({
     setCatBudgets(existing);
   }
 
-  async function handleSave() {
+  function handleSave() {
     if (!budgetNum || budgetNum <= 0) {
       toast.error("Please enter a valid budget amount");
       return;
     }
-    setLoading(true);
 
-    // 1. Save monthly budget + rollover
-    const fd = new FormData();
-    fd.set("monthly_budget", String(budgetNum));
-    fd.set("rollover_enabled", String(rollover));
-    const result = await updateBudget(fd);
+    // ── Snapshot values before clearing state ────────────────────────────────
+    const savedBudgetNum = budgetNum;
+    const savedRollover = rollover;
 
-    if (result?.error) {
-      toast.error(result.error);
-      setLoading(false);
-      return;
-    }
-
-    // 2. Compute the diff: which categories were added/changed/removed
+    // Compute the category-limit diff synchronously (before closing modal)
     const validRows = catBudgets.filter(
       (r) => r.categoryId && Number(r.amount) > 0
     );
     const existingIds = Object.keys(categoryLimits);
     const updatedIds = validRows.map((r) => r.categoryId);
     const removedIds = existingIds.filter((id) => !updatedIds.includes(id));
-
     const allUpdates: { categoryId: string; limit: number | null }[] = [
       ...validRows.map((r) => ({
         categoryId: r.categoryId,
@@ -222,18 +220,34 @@ export function BudgetSetupDialog({
       ...removedIds.map((id) => ({ categoryId: id, limit: null })),
     ];
 
-    if (allUpdates.length > 0) {
-      const catResult = await saveCategoryLimits(allUpdates);
-      if (catResult?.error) {
-        toast.error(catResult.error);
-        setLoading(false);
-        return;
-      }
-    }
-
-    toast.success("Budget saved!");
-    setLoading(false);
+    // ── Optimistic UI: close immediately + tell parent ────────────────────────
     setOpen(false);
+    onOptimisticSave?.(savedBudgetNum);
+
+    // ── Background commit: no await here — UI is already updated ─────────────
+    const fd = new FormData();
+    fd.set("monthly_budget", String(savedBudgetNum));
+    fd.set("rollover_enabled", String(savedRollover));
+
+    (async () => {
+      const result = await updateBudget(fd);
+      if (result?.error) throw new Error(result.error);
+
+      if (allUpdates.length > 0) {
+        const catResult = await saveCategoryLimits(allUpdates);
+        if (catResult?.error) throw new Error(catResult.error);
+      }
+
+      toast.success("Budget saved!");
+    })().catch((err: unknown) => {
+      // Server failed — rollback optimistic state and surface the error
+      onOptimisticRollback?.();
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Failed to save budget. Please try again."
+      );
+    });
   }
 
   async function handleReset() {
@@ -652,10 +666,10 @@ export function BudgetSetupDialog({
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={loading || !budgetNum}
+                disabled={!budgetNum}
                 className="rounded-lg bg-[#1E6B4E] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#185c43] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Saving…" : "Save budget"}
+                Save budget
               </button>
             </div>
           </div>

@@ -177,10 +177,16 @@ export function BudgetWidget({
   rolloverEnabled,
 }: Props) {
   const [breakdownOpen, setBreakdownOpen] = useState(false);
+  // Optimistic budget: set immediately on save, cleared once server confirms
+  // via revalidatePath (which updates the `budget` prop from the server).
+  const [optimisticBudget, setOptimisticBudget] = useState<number | null>(null);
 
-  const pct = Math.min((monthExpense / budget) * 100, 100);
-  const remaining = budget - monthExpense;
-  const over = monthExpense > budget;
+  // All display calculations use displayBudget so the UI reacts instantly.
+  const displayBudget = optimisticBudget ?? budget;
+
+  const pct = Math.min((monthExpense / displayBudget) * 100, 100);
+  const remaining = displayBudget - monthExpense;
+  const over = monthExpense > displayBudget;
 
   const barColor =
     over || pct >= 95
@@ -212,6 +218,10 @@ export function BudgetWidget({
             rolloverEnabled={rolloverEnabled}
             categories={categories}
             categoryLimits={categoryLimits}
+            onOptimisticSave={(newBase) =>
+              setOptimisticBudget(newBase + rolloverAmount)
+            }
+            onOptimisticRollback={() => setOptimisticBudget(null)}
           />
           {rolloverAmount > 0 && (
             <span className="text-xs font-medium text-[#1E6B4E] tabular-nums">
@@ -224,7 +234,7 @@ export function BudgetWidget({
         </div>
         <span className="text-xs text-gray-500 tabular-nums">
           {formatINR(monthExpense)}{" "}
-          <span className="text-gray-400">of {formatINR(budget)}</span>
+          <span className="text-gray-400">of {formatINR(displayBudget)}</span>
         </span>
       </div>
 
@@ -286,7 +296,7 @@ export function BudgetWidget({
           )}
         >
           {over
-            ? `${formatINR(monthExpense - budget)} over budget`
+            ? `${formatINR(monthExpense - displayBudget)} over budget`
             : `${formatINR(remaining)} remaining`}
         </p>
 
