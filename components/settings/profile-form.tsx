@@ -10,21 +10,19 @@ export function ProfileForm({ fullName }: { fullName: string }) {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting, isDirty },
+    formState: { errors, isDirty },
   } = useForm<ProfileInput>({
     resolver: zodResolver(profileSchema),
     defaultValues: { full_name: fullName },
   });
 
-  async function onSubmit(data: ProfileInput) {
+  function onSubmit(data: ProfileInput) {
     const fd = new FormData();
     fd.set("full_name", data.full_name);
-    const result = await updateProfile(fd);
-    if (result?.error) {
-      toast.error(result.error);
-    } else {
-      toast.success("Profile updated");
-    }
+    toast.success("Profile updated");
+    updateProfile(fd).then((result) => {
+      if (result?.error) toast.error(`Failed — ${result.error}`);
+    });
   }
 
   const inputClass =
@@ -53,10 +51,10 @@ export function ProfileForm({ fullName }: { fullName: string }) {
       <div className="flex justify-end">
         <button
           type="submit"
-          disabled={isSubmitting || !isDirty}
+          disabled={!isDirty}
           className="rounded-lg bg-[#1E6B4E] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#185c43] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
         >
-          {isSubmitting ? "Saving…" : "Save changes"}
+          Save changes
         </button>
       </div>
     </form>

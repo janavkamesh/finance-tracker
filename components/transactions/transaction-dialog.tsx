@@ -281,14 +281,12 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
       return;
     }
 
-    // ── Edit path (synchronous — confirmation matters before close) ───
-    const result = await updateTransaction(transaction!.id, fd);
-    if (result?.error) {
-      toast.error(result.error);
-    } else {
-      toast.success("Transaction updated");
-      setOpen(false);
-    }
+    // ── Edit path — optimistic: close + confirm immediately ──────────
+    setOpen(false);
+    toast.success("Transaction updated");
+    updateTransaction(transaction!.id, fd).then((result) => {
+      if (result?.error) toast.error(`Update failed — ${result.error}`);
+    });
   }
 
   const inputClass =
@@ -510,12 +508,9 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="rounded-lg bg-[#1E6B4E] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#185c43] disabled:opacity-60 disabled:cursor-not-allowed"
+                className="rounded-lg bg-[#1E6B4E] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#185c43]"
               >
-                {isSubmitting
-                  ? isEdit ? "Saving…" : "Adding…"
-                  : isEdit ? "Save changes" : "Add transaction"}
+                {isEdit ? "Save changes" : "Add transaction"}
               </button>
             </div>
           </form>

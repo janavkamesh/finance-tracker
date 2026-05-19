@@ -60,23 +60,20 @@ export function CategoryDialog({ category }: Props) {
     }
   }, [open, isEdit, reset]);
 
-  async function onSubmit(data: CategoryInput) {
+  function onSubmit(data: CategoryInput) {
     const fd = new FormData();
     fd.set("name", data.name);
     fd.set("type", data.type);
     if (data.color) fd.set("color", data.color);
     fd.set("monthly_limit", monthlyLimit);
 
-    const result = isEdit
-      ? await updateCategory(category!.id, fd)
-      : await addCategory(fd);
+    setOpen(false);
+    toast.success(isEdit ? "Category updated" : "Category added");
 
-    if (result?.error) {
-      toast.error(result.error);
-    } else {
-      toast.success(isEdit ? "Category updated" : "Category added");
-      setOpen(false);
-    }
+    const action = isEdit ? updateCategory(category!.id, fd) : addCategory(fd);
+    action.then((result) => {
+      if (result?.error) toast.error(`Failed — ${result.error}`);
+    });
   }
 
   const inputClass =
@@ -220,12 +217,9 @@ export function CategoryDialog({ category }: Props) {
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="rounded-lg bg-[#1E6B4E] px-4 py-2 text-sm font-semibold text-white hover:bg-[#185c43] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                className="rounded-lg bg-[#1E6B4E] px-4 py-2 text-sm font-semibold text-white hover:bg-[#185c43] transition-colors"
               >
-                {isSubmitting
-                  ? isEdit ? "Saving…" : "Adding…"
-                  : isEdit ? "Save changes" : "Add category"}
+                {isEdit ? "Save changes" : "Add category"}
               </button>
             </div>
           </form>

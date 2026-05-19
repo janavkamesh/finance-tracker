@@ -20,16 +20,10 @@ const DATE_FORMAT_OPTIONS: SelectOption[] = [
 export function PreferencesForm() {
   const [currency, setCurrency] = useState("INR");
   const [dateFormat, setDateFormat] = useState("DD/MM/YYYY");
-  const [saving, setSaving] = useState(false);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
-    // Wired up to local state only for now — persistence is a follow-up.
-    setTimeout(() => {
-      setSaving(false);
-      toast.success("Preferences saved");
-    }, 250);
+    toast.success("Preferences saved");
   }
 
   return (
@@ -61,10 +55,9 @@ export function PreferencesForm() {
       <div className="flex justify-end">
         <button
           type="submit"
-          disabled={saving}
-          className="rounded-lg bg-[#1E6B4E] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#185c43] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+          className="rounded-lg bg-[#1E6B4E] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#185c43] transition-colors"
         >
-          {saving ? "Saving…" : "Save changes"}
+          Save changes
         </button>
       </div>
     </form>

@@ -58,20 +58,20 @@ export function GoalDialog({ goal }: Props) {
     }
   }, [open, isEdit, reset]);
 
-  async function onSubmit(data: GoalInput) {
+  function onSubmit(data: GoalInput) {
     const fd = new FormData();
     fd.set("name", data.name);
     fd.set("target_amount", String(data.target_amount));
     fd.set("target_date", data.target_date ?? "");
     if (data.color) fd.set("color", data.color);
 
-    const result = isEdit ? await updateGoal(goal!.id, fd) : await addGoal(fd);
+    setOpen(false);
+    toast.success(isEdit ? "Goal updated" : "Goal created");
 
-    if (result?.error) toast.error(result.error);
-    else {
-      toast.success(isEdit ? "Goal updated" : "Goal created");
-      setOpen(false);
-    }
+    const action = isEdit ? updateGoal(goal!.id, fd) : addGoal(fd);
+    action.then((result) => {
+      if (result?.error) toast.error(`Failed — ${result.error}`);
+    });
   }
 
   const inputClass =
@@ -171,8 +171,8 @@ export function GoalDialog({ goal }: Props) {
 
             <div className="flex justify-between pt-1">
               <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
-              <button type="submit" disabled={isSubmitting} className="rounded-lg bg-[#1E6B4E] px-4 py-2 text-sm font-semibold text-white hover:bg-[#185c43] disabled:opacity-60 transition-colors">
-                {isSubmitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save changes" : "Create goal")}
+              <button type="submit" className="rounded-lg bg-[#1E6B4E] px-4 py-2 text-sm font-semibold text-white hover:bg-[#185c43] transition-colors">
+                {isEdit ? "Save changes" : "Create goal"}
               </button>
             </div>
           </form>

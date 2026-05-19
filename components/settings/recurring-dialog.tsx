@@ -98,7 +98,7 @@ export function RecurringDialog({ categories, recurring, triggerVariant = "prima
     }
   }, [open, isEdit, reset]);
 
-  async function onSubmit(data: RecurringInput) {
+  function onSubmit(data: RecurringInput) {
     const fd = new FormData();
     fd.set("type", data.type);
     fd.set("amount", String(data.amount));
@@ -107,16 +107,13 @@ export function RecurringDialog({ categories, recurring, triggerVariant = "prima
     fd.set("frequency", data.frequency);
     fd.set("next_due_date", data.next_due_date);
 
-    const result = isEdit
-      ? await updateRecurring(recurring!.id, fd)
-      : await addRecurring(fd);
+    setOpen(false);
+    toast.success(isEdit ? "Recurring updated" : "Recurring transaction added");
 
-    if (result?.error) {
-      toast.error(result.error);
-    } else {
-      toast.success(isEdit ? "Updated" : "Recurring transaction added");
-      setOpen(false);
-    }
+    const action = isEdit ? updateRecurring(recurring!.id, fd) : addRecurring(fd);
+    action.then((result) => {
+      if (result?.error) toast.error(`Failed — ${result.error}`);
+    });
   }
 
   const inputClass =
@@ -293,10 +290,9 @@ export function RecurringDialog({ categories, recurring, triggerVariant = "prima
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="rounded-lg bg-[#1E6B4E] px-4 py-2 text-sm font-semibold text-white hover:bg-[#185c43] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                className="rounded-lg bg-[#1E6B4E] px-4 py-2 text-sm font-semibold text-white hover:bg-[#185c43] transition-colors"
               >
-                {isSubmitting ? (isEdit ? "Saving…" : "Adding…") : (isEdit ? "Save changes" : "Add recurring")}
+                {isEdit ? "Save changes" : "Add recurring"}
               </button>
             </div>
           </form>

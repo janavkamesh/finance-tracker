@@ -27,17 +27,15 @@ export function AddSavingsDialog({ goalId, goalName }: { goalId: string; goalNam
     defaultValues: { amount: undefined },
   });
 
-  async function onSubmit(data: AddSavingsInput) {
+  function onSubmit(data: AddSavingsInput) {
     const fd = new FormData();
     fd.set("amount", String(data.amount));
-    const result = await addSavings(goalId, fd);
-    if (result?.error) {
-      toast.error(result.error);
-    } else {
-      toast.success("Savings added!");
-      reset();
-      setOpen(false);
-    }
+    reset();
+    setOpen(false);
+    toast.success("Savings added!");
+    addSavings(goalId, fd).then((result) => {
+      if (result?.error) toast.error(`Failed — ${result.error}`);
+    });
   }
 
   const inputClass =
@@ -80,8 +78,8 @@ export function AddSavingsDialog({ goalId, goalName }: { goalId: string; goalNam
 
             <div className="flex justify-between">
               <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
-              <button type="submit" disabled={isSubmitting} className="rounded-lg bg-[#1E6B4E] px-4 py-2 text-sm font-semibold text-white hover:bg-[#185c43] disabled:opacity-60 transition-colors">
-                {isSubmitting ? "Adding…" : "Add"}
+              <button type="submit" className="rounded-lg bg-[#1E6B4E] px-4 py-2 text-sm font-semibold text-white hover:bg-[#185c43] transition-colors">
+                Add
               </button>
             </div>
           </form>

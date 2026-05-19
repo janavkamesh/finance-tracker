@@ -467,6 +467,76 @@ The moment the navigation bar mounts, it fires background prefetch requests for 
 
 ---
 
+## Optimistic UI Architecture (Global)
+
+Every user action in the app follows a **fire-and-confirm-instantly** pattern. No spinner, no "Syncing…" text, no disabled states while waiting for the server.
+
+### The Pattern
+
+```
+1. User clicks → UI updates immediately (form closes / toast fires)
+2. Server action runs in the background (.then() / fire-and-forget)
+3. If server fails → silent error toast; user can retry
+```
+
+### Implementation per action type
+
+**Dialogs (Add/Edit):** Close the dialog and show a success toast _before_ awaiting the server action. The `.then()` handler only runs on failure, showing an error toast.
+
+```ts
+function onSubmit(data) {
+  setOpen(false);                              // instant
+  toast.success("Saved");                      // instant
+  serverAction(data).then((result) => {        // background
+    if (result?.error) toast.error(result.error);
+  });
+}
+```
+
+**Delete buttons:** Confirm dialog clears immediately; server call is fire-and-forget. No `loading` state. The `revalidatePath` in the server action refreshes the list once complete.
+
+```ts
+function handleDelete() {
+  setConfirming(false);                        // instant
+  deleteAction(id).then((result) => {          // background
+    if (result?.error) toast.error(result.error);
+    else toast.success("Deleted");
+  });
+}
+```
+
+**Forms (non-dialog, e.g. budget/profile):** Show success toast immediately, persist in background. No "Saving…" button label.
+
+### Files updated
+
+| Component | Change |
+|---|---|
+| `transactions/transaction-dialog.tsx` | Edit path made optimistic (was sync await) |
+| `transactions/delete-transaction-button.tsx` | Removed `loading` state |
+| `goals/goal-dialog.tsx` | Both add + edit paths optimistic |
+| `goals/add-savings-dialog.tsx` | Optimistic close + toast |
+| `goals/delete-goal-button.tsx` | Removed `loading` state |
+| `settings/recurring-dialog.tsx` | Both add + edit paths optimistic |
+| `settings/delete-recurring-button.tsx` | Removed `loading` state |
+| `settings/budget-form.tsx` | Removed `saving` state, fire-and-forget |
+| `settings/category-dialog.tsx` | Both add + edit paths optimistic |
+| `settings/delete-category-button.tsx` | Removed `loading` state |
+| `settings/preferences-form.tsx` | Removed 250ms setTimeout |
+| `settings/profile-form.tsx` | Removed `isSubmitting` dependency |
+| `net-worth/account-dialog.tsx` | Both add + edit paths optimistic |
+| `net-worth/delete-account-button.tsx` | Removed `loading` state |
+
+> `quick-add-form.tsx` and `budget-setup-dialog.tsx` were already optimistic before this pass.
+
+### What was purged
+
+- All `"Saving…"` / `"Adding…"` / `"Creating…"` button label states
+- All `disabled={saving}` / `disabled={loading}` / `disabled={isSubmitting}` on submit buttons
+- `useState` `loading`/`saving` variables across 5 delete buttons and 2 forms
+- 250ms fake timeout in `preferences-form.tsx`
+
+---
+
 ## Version 2 — Feature Roadmap
 
 Researched from Mint, YNAB, Monarch Money, Copilot, and PocketSmith. Five features proven in top finance apps, chosen for high value to Indian users (salaried professionals, EMI payers, SIP investors) and buildable on the existing Supabase + Next.js stack.

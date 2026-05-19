@@ -7,18 +7,13 @@ import { deleteCategory } from "@/actions/categories";
 
 export function DeleteCategoryButton({ id }: { id: string }) {
   const [confirming, setConfirming] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  async function handleDelete() {
-    setLoading(true);
-    const result = await deleteCategory(id);
-    if (result?.error) {
-      toast.error(result.error);
-      setLoading(false);
-      setConfirming(false);
-    } else {
-      toast.success("Category deleted");
-    }
+  function handleDelete() {
+    setConfirming(false);
+    deleteCategory(id).then((result) => {
+      if (result?.error) toast.error(result.error);
+      else toast.success("Category deleted");
+    });
   }
 
   if (confirming) {
@@ -26,10 +21,9 @@ export function DeleteCategoryButton({ id }: { id: string }) {
       <div className="flex items-center gap-1">
         <button
           onClick={handleDelete}
-          disabled={loading}
-          className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-60 transition-colors"
+          className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
         >
-          {loading ? "…" : "Delete"}
+          Delete
         </button>
         <button
           onClick={() => setConfirming(false)}

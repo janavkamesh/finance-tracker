@@ -7,20 +7,15 @@ import { updateBudget } from "@/actions/budget";
 
 export function BudgetForm({ current }: { current: number | null }) {
   const [value, setValue] = useState(current ? String(current) : "");
-  const [saving, setSaving] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSaving(true);
     const fd = new FormData();
     fd.set("monthly_budget", value);
-    const result = await updateBudget(fd);
-    setSaving(false);
-    if (result?.error) {
-      toast.error(result.error);
-    } else {
-      toast.success("Monthly budget saved");
-    }
+    toast.success("Monthly budget saved");
+    updateBudget(fd).then((result) => {
+      if (result?.error) toast.error(result.error);
+    });
   }
 
   return (
@@ -65,10 +60,9 @@ export function BudgetForm({ current }: { current: number | null }) {
         )}
         <button
           type="submit"
-          disabled={saving}
-          className="rounded-lg bg-[#1E6B4E] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#185c43] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+          className="rounded-lg bg-[#1E6B4E] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#185c43] transition-colors"
         >
-          {saving ? "Saving…" : "Save changes"}
+          Save changes
         </button>
       </div>
     </form>
