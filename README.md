@@ -1795,3 +1795,47 @@ Replaced `<select>` for category in the transaction dialog and recurring dialog 
 **`app/(dashboard)/dashboard/page.tsx`**:
 - Removed `import { CategoryLimits }` and the `<CategoryLimits items={categoryLimitItems} />` JSX block
 - `categoryLimitItems` data still computed and passed to `BudgetWidget` for the popover
+
+---
+
+## Phase 52 — Category Type Silo + Deletion + Creation Date
+
+### Feature 1: Fix Category Type Bleeding
+
+**Root cause:** `createCategory` was inserting all user-created categories with `type: "both"`, so every new category appeared in both the Income and Expense tab dropdowns regardless of context.
+
+**Fix — strict type inheritance:**
+- `createCategory` now accepts `type: "income" | "expense"` (no more `"both"` for user-created categories)
+- `CategoryPicker` receives a new `transactionType` prop from `TransactionDialog` (via `selectedType = watch("type")`)
+- On the create sub-view, a small pill badge ("INCOME" green / "EXPENSE" red) confirms which type the new category will be tagged with
+- `localCategories` (created inline during the session) are filtered by `transactionType` in the `allCategories` memo — they can't bleed into the opposite tab even before a page refresh
+
+### Feature 2: Category Deletion with Safe Fallback
+
+**`actions/categories.ts` — `safeDeleteCategory(id)`:**
+1. Finds the "Other" system category (`name = 'Other', user_id IS NULL`)
+2. Bulk-reassigns all the user's transactions from the deleted category to "Other"
+3. Deletes the category row (only user-owned, non-system rows)
+
+**UX — inline confirm (no nested modal):**
+- Hover over any user-created category row → trash icon appears via `opacity-0 group-hover:opacity-100`
+- Click trash → row flips to danger state ("Delete «name»?" + **Delete** button + Cancel)
+- At most one row can be in confirm state at a time (`confirmingDeleteId` state)
+- After deletion: removed from `deletedIds` Set (optimistic client-side removal), form value cleared if it was selected, success toast shown
+
+### Feature 3: Creation Date Indicator
+
+- `Category` interface extended with `user_id` and `created_at` fields
+- Dashboard and transactions page queries updated: `"id, name, type, color, icon, user_id, created_at"`
+- `formatCreatedAt(iso)` formats to `"Added May 19"` using `toLocaleDateString("en-IN", { month: "short", day: "numeric" })`
+- Shown only on user-created rows (`user_id !== null`), `text-[11px] text-gray-400 font-normal`, hidden on mobile (`hidden sm:block`), positioned left of the trash icon
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `actions/categories.ts` | `createCategory` accepts `type`; new `safeDeleteCategory` with reassignment |
+| `components/transactions/category-picker.tsx` | `transactionType` prop; type-filtered local categories; deletion UI; creation date |
+| `components/transactions/transaction-dialog.tsx` | `Category` interface + `user_id`/`created_at`; passes `transactionType` to picker |
+| `app/(dashboard)/dashboard/page.tsx` | Categories query adds `user_id, created_at` |
+| `app/(dashboard)/transactions/page.tsx` | Categories query adds `user_id, created_at` |

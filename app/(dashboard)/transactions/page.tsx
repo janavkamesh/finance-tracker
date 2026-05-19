@@ -138,7 +138,7 @@ export default async function TransactionsPage({
   // Categories for filter dropdown + add/edit dialog
   const { data: categories } = await supabase
     .from("categories")
-    .select("id, name, type, color, icon")
+    .select("id, name, type, color, icon, user_id, created_at")
     .or(`user_id.eq.${user!.id},user_id.is.null`)
     .order("name");
 

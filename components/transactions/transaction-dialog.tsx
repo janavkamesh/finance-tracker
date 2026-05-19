@@ -21,6 +21,8 @@ interface Category {
   name: string;
   type: "income" | "expense" | "both";
   color: string | null;
+  user_id?: string | null;
+  created_at?: string | null;
 }
 
 interface Transaction {
@@ -411,6 +413,7 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
                     value={field.value}
                     onChange={field.onChange}
                     error={errors.category_id?.message}
+                    transactionType={selectedType}
                   />
                 )}
               />

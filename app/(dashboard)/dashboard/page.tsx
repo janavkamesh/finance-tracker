@@ -74,7 +74,7 @@ export default async function DashboardPage() {
       .order("next_due_date"),
     supabase
       .from("categories")
-      .select("id, name, type, color, monthly_limit, icon")
+      .select("id, name, type, color, monthly_limit, icon, user_id, created_at")
       .or(`user_id.eq.${user!.id},user_id.is.null`)
       .order("name"),
     // Upcoming recurring bills later this month (not already due)

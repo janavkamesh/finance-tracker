@@ -4,10 +4,11 @@ import { useState, useMemo, useEffect, useRef, useTransition } from "react";
 import { createPortal } from "react-dom";
 import {
   Search, X, Check, ChevronDown, Plus, ArrowLeft,
-  Tag, type LucideIcon,
+  Tag, Trash2, type LucideIcon,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { createCategory } from "@/actions/categories";
+import { createCategory, safeDeleteCategory } from "@/actions/categories";
 import { ICON_REGISTRY, getCategoryIcon } from "@/lib/category-icons";
 
 interface Category {
@@ -16,6 +17,9 @@ interface Category {
   type: "income" | "expense" | "both";
   color?: string | null;
   icon?: string | null;
+  /** null / undefined = system category; truthy = user-created */
+  user_id?: string | null;
+  created_at?: string | null;
 }
 
 interface Props {
@@ -24,6 +28,12 @@ interface Props {
   onChange: (id: string) => void;
   onClose?: () => void;
   error?: string;
+  /**
+   * The currently active transaction tab. Used to:
+   *   1. Filter the category list to matching types
+   *   2. Tag newly created categories with the correct type (never "both")
+   */
+  transactionType?: "income" | "expense";
 }
 
 const ICON_LIST: Array<{ key: string; Icon: LucideIcon }> = Object.entries(
@@ -35,13 +45,32 @@ const PRESET_COLORS = [
   "#7C3AED", "#EC4899", "#0D9488", "#92400E",
 ];
 
+/** "Added May 19" — for user-created categories */
+function formatCreatedAt(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return `Added ${d.toLocaleDateString("en-IN", { month: "short", day: "numeric" })}`;
+}
+
 // ── Main component ──────────────────────────────────────────────────────────
-export function CategoryPicker({ categories, value, onChange, onClose, error }: Props) {
+export function CategoryPicker({
+  categories,
+  value,
+  onChange,
+  onClose,
+  error,
+  transactionType,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [view, setView] = useState<"list" | "create">("list");
   const [search, setSearch] = useState("");
   const [localCategories, setLocalCategories] = useState<Category[]>([]);
+
+  // Deletion state
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
   // Create-category form state
   const [selectedIconKey, setSelectedIconKey] = useState("Tag");
@@ -53,7 +82,18 @@ export function CategoryPicker({ categories, value, onChange, onClose, error }: 
   const searchRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  const allCategories = useMemo(() => [...categories, ...localCategories], [categories, localCategories]);
+  // Merge server + locally-created categories, apply type filter on local ones,
+  // and remove any client-side deleted IDs.
+  const allCategories = useMemo(() => {
+    const base = categories.filter((c) => !deletedIds.has(c.id));
+    const local = localCategories.filter(
+      (c) =>
+        !deletedIds.has(c.id) &&
+        (!transactionType || c.type === transactionType || c.type === "both"),
+    );
+    return [...base, ...local];
+  }, [categories, localCategories, deletedIds, transactionType]);
+
   const selected = allCategories.find((c) => c.id === value);
 
   const filtered = useMemo(
@@ -74,6 +114,7 @@ export function CategoryPicker({ categories, value, onChange, onClose, error }: 
     if (open) {
       setSearch("");
       setView("list");
+      setConfirmingDeleteId(null);
       setTimeout(() => searchRef.current?.focus(), 80);
     }
   }, [open]);
@@ -121,6 +162,8 @@ export function CategoryPicker({ categories, value, onChange, onClose, error }: 
         name: newName.trim(),
         color: selectedColor,
         icon: selectedIconKey,
+        // New categories inherit the active tab type — never "both"
+        type: transactionType ?? "expense",
       });
 
       if (result.error) {
@@ -135,6 +178,8 @@ export function CategoryPicker({ categories, value, onChange, onClose, error }: 
           type: result.data.type as "income" | "expense" | "both",
           color: result.data.color,
           icon: result.data.icon,
+          user_id: result.data.user_id,
+          created_at: result.data.created_at,
         };
         setLocalCategories((prev) => [...prev, newCat]);
 
@@ -148,13 +193,32 @@ export function CategoryPicker({ categories, value, onChange, onClose, error }: 
     });
   }
 
+  async function handleDelete(catId: string) {
+    setIsDeleting(true);
+    try {
+      const result = await safeDeleteCategory(catId);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      // Optimistically remove from local state
+      setDeletedIds((prev) => new Set([...prev, catId]));
+      setLocalCategories((prev) => prev.filter((c) => c.id !== catId));
+      // Clear form selection if this category was selected
+      if (value === catId) onChange("");
+      setConfirmingDeleteId(null);
+      toast.success("Category deleted");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   const SelectedIcon = selected ? getCategoryIcon(selected) : null;
   const PreviewIcon = ICON_REGISTRY[selectedIconKey] ?? Tag;
 
   // ── Portal overlay panel ────────────────────────────────────────────────
   const panel = (
-    // Backdrop — clicking it closes ONLY the category picker (stopPropagation
-    // on the inner panel prevents the click from also reaching this handler).
+    // Backdrop — clicking it closes ONLY the category picker
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center"
       onMouseDown={handleClose}
@@ -218,39 +282,117 @@ export function CategoryPicker({ categories, value, onChange, onClose, error }: 
                 filtered.map((cat) => {
                   const Icon = getCategoryIcon(cat);
                   const isSelected = cat.id === value;
+                  const isUserCat = Boolean(cat.user_id);
+                  const isConfirming = confirmingDeleteId === cat.id;
+
                   return (
-                    <button
+                    <div
                       key={cat.id}
-                      type="button"
-                      onClick={() => {
-                        onChange(cat.id);
-                        setOpen(false);
-                      }}
                       className={cn(
-                        "w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors",
-                        isSelected
-                          ? "bg-[#1E6B4E]/5 text-[#1E6B4E]"
-                          : "text-gray-700 hover:bg-gray-50"
+                        "group flex items-center gap-3 px-4 py-3 text-sm transition-colors",
+                        isSelected && !isConfirming
+                          ? "bg-[#1E6B4E]/5"
+                          : isConfirming
+                            ? "bg-red-50"
+                            : "hover:bg-gray-50",
                       )}
                     >
+                      {/* ── Icon ── */}
                       <div
                         className={cn(
-                          "flex h-8 w-8 items-center justify-center rounded-lg shrink-0",
-                          isSelected ? "bg-[#1E6B4E]/10" : "bg-gray-100"
+                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                          isSelected && !isConfirming ? "bg-[#1E6B4E]/10" : "bg-gray-100"
                         )}
                       >
                         <Icon
                           className={cn(
                             "size-4",
-                            isSelected ? "text-[#1E6B4E]" : "text-gray-500"
+                            isSelected && !isConfirming ? "text-[#1E6B4E]" : "text-gray-500"
                           )}
                         />
                       </div>
-                      <span className="flex-1 font-medium">{cat.name}</span>
-                      {isSelected && (
+
+                      {/* ── Name (selection target) ── */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isConfirming) return;
+                          onChange(cat.id);
+                          setOpen(false);
+                        }}
+                        className={cn(
+                          "flex-1 min-w-0 text-left font-medium truncate",
+                          isSelected && !isConfirming
+                            ? "text-[#1E6B4E]"
+                            : isConfirming
+                              ? "text-red-700"
+                              : "text-gray-700",
+                        )}
+                      >
+                        {isConfirming ? (
+                          <span className="text-xs font-semibold text-red-600">
+                            Delete &ldquo;{cat.name}&rdquo;?
+                          </span>
+                        ) : (
+                          cat.name
+                        )}
+                      </button>
+
+                      {/* ── Right meta (user categories only) ── */}
+                      {isUserCat && !isConfirming && (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {/* Creation date — always visible, muted */}
+                          {cat.created_at && (
+                            <span className="text-[11px] text-gray-400 font-normal tabular-nums hidden sm:block">
+                              {formatCreatedAt(cat.created_at)}
+                            </span>
+                          )}
+                          {/* Checkmark for selected */}
+                          {isSelected && (
+                            <Check className="size-4 text-[#1E6B4E] shrink-0" />
+                          )}
+                          {/* Trash — appears on row hover */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirmingDeleteId(cat.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 flex h-6 w-6 items-center justify-center rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                            aria-label={`Delete ${cat.name}`}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* System category — just show checkmark */}
+                      {!isUserCat && isSelected && (
                         <Check className="size-4 text-[#1E6B4E] shrink-0" />
                       )}
-                    </button>
+
+                      {/* ── Inline delete confirm ── */}
+                      {isUserCat && isConfirming && (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            disabled={isDeleting}
+                            onClick={() => handleDelete(cat.id)}
+                            className="rounded-md bg-red-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-600 disabled:opacity-60 transition-colors"
+                          >
+                            {isDeleting ? "…" : "Delete"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isDeleting}
+                            onClick={() => setConfirmingDeleteId(null)}
+                            className="rounded-md px-2 py-1 text-[11px] font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   );
                 })
               )}
@@ -289,9 +431,21 @@ export function CategoryPicker({ categories, value, onChange, onClose, error }: 
               <h3 className="text-base font-semibold text-gray-900">
                 Create category
               </h3>
+              {transactionType && (
+                <span
+                  className={cn(
+                    "ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                    transactionType === "income"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700",
+                  )}
+                >
+                  {transactionType}
+                </span>
+              )}
             </div>
 
-            {/* ── Icon grid (90% of card height) ── */}
+            {/* ── Icon grid ── */}
             <div className="h-56 overflow-y-auto p-3 border-b border-gray-100">
               <div className="grid grid-cols-6 gap-1.5">
                 {ICON_LIST.map(({ key, Icon }) => (
@@ -317,7 +471,7 @@ export function CategoryPicker({ categories, value, onChange, onClose, error }: 
               </div>
             </div>
 
-            {/* ── Bottom bar (~10%) ── */}
+            {/* ── Bottom bar ── */}
             <div className="px-4 py-3 space-y-3">
               {/* Preview + color swatches */}
               <div className="flex items-center gap-3">
