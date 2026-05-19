@@ -35,7 +35,6 @@ export function TransactionFilters({
   const params = useSearchParams();
 
   const currentSearch = params.get("search") ?? "";
-  const currentType = params.get("type") ?? "all";
   const currentPeriod = params.get("period") ?? "this_month";
   const currentCategory = params.get("category") ?? "all";
 
@@ -56,12 +55,6 @@ export function TransactionFilters({
     document.addEventListener("mousedown", handleOutside);
     return () => document.removeEventListener("mousedown", handleOutside);
   }, [menuOpen]);
-
-  // Prefetch income/expense filter variants so first-click is instant
-  useEffect(() => {
-    router.prefetch(`${pathname}?type=income`);
-    router.prefetch(`${pathname}?type=expense`);
-  }, [router, pathname]);
 
   const updateParam = useCallback(
     (key: string, value: string) => {
@@ -92,7 +85,6 @@ export function TransactionFilters({
 
   const hasActiveFilters =
     currentSearch ||
-    currentType !== "all" ||
     currentPeriod !== "this_month" ||
     currentCategory !== "all";
 
@@ -125,28 +117,6 @@ export function TransactionFilters({
           placeholder="Search description…"
           className="h-9 w-full sm:w-52 rounded-lg border border-gray-200 bg-white pl-8 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1E6B4E]/30 focus:border-[#1E6B4E] transition-colors"
         />
-      </div>
-
-      {/* Type toggle */}
-      <div className="flex h-9 rounded-lg border border-gray-200 bg-white overflow-hidden text-sm font-medium">
-        {(["all", "income", "expense"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => updateParam("type", t)}
-            className={cn(
-              "px-3 transition-colors capitalize",
-              currentType === t
-                ? t === "income"
-                  ? "bg-green-100 text-green-700"
-                  : t === "expense"
-                    ? "bg-red-100 text-red-700"
-                    : "bg-[#1E6B4E]/10 text-[#1E6B4E]"
-                : "text-gray-500 hover:bg-gray-50",
-            )}
-          >
-            {t}
-          </button>
-        ))}
       </div>
 
       {/* Period */}

@@ -165,8 +165,6 @@ export default async function TransactionsPage({
     .order("created_at", { ascending: false });
 
   if (search) query = query.ilike("description", `%${search}%`);
-  if (typeFilter === "income" || typeFilter === "expense")
-    query = query.eq("type", typeFilter);
   if (categoryFilter) query = query.eq("category_id", categoryFilter);
 
   const dateRange = getDateRange(period);
@@ -175,7 +173,6 @@ export default async function TransactionsPage({
 
   let prevQuery = supabase.from("transactions").select("amount, type").eq("user_id", user!.id);
   if (search) prevQuery = prevQuery.ilike("description", `%${search}%`);
-  if (typeFilter === "income" || typeFilter === "expense") prevQuery = prevQuery.eq("type", typeFilter);
   if (categoryFilter) prevQuery = prevQuery.eq("category_id", categoryFilter);
   
   const prevDateRange = getPreviousDateRange(period);
@@ -224,9 +221,7 @@ export default async function TransactionsPage({
               : `${txns.length} transaction${txns.length !== 1 ? "s" : ""} found`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <TransactionDialog categories={cats} activeMonth={activePeriodMonth} />
-        </div>
+        <div className="flex items-center gap-2" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 lg:gap-8 items-start">
@@ -268,7 +263,7 @@ export default async function TransactionsPage({
       </div>
 
       {/* Filters — always visible when there are no transactions (so user can clear them) */}
-      {txns.length === 0 && (search || typeFilter || categoryFilter || period !== "this_month") && (
+      {txns.length === 0 && (search || categoryFilter || period !== "this_month") && (
         <div className="mb-4">
           <Suspense fallback={null}>
             <TransactionFilters
@@ -287,7 +282,7 @@ export default async function TransactionsPage({
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0c1.1.128 1.907 1.077 1.907 2.185z" />
             </svg>
           </div>
-          {search || typeFilter || categoryFilter ? (
+          {search || categoryFilter ? (
             <>
               <p className="text-sm font-medium text-gray-900">{emptyFilterMessage}</p>
               <p className="text-sm text-gray-500 mt-1">Try adjusting or clearing the filters above.</p>

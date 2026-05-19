@@ -1,7 +1,7 @@
 "use client";
 
 import { formatINR } from "@/lib/utils";
-import { CalendarClock, CheckCircle2, Home, Monitor, Zap } from "lucide-react";
+import { CalendarClock, Home, Monitor, Zap } from "lucide-react";
 import { TransactionDialog } from "@/components/transactions/transaction-dialog";
 
 const MOCK_BILLS = [
@@ -52,26 +52,10 @@ export function UpcomingBillsWidget({ categories, activeMonth }: { categories: a
                   {formatINR(bill.amount)}
                 </span>
                 
-                {/* Checkmark Action wrapped in TransactionDialog for pre-filling */}
-                <TransactionDialog 
-                  categories={categories} 
+                <TransactionDialog
+                  categories={categories}
                   activeMonth={activeMonth}
-                  prefill={{
-                    type: "expense",
-                    amount: bill.amount,
-                    description: bill.name,
-                    category_name: bill.category
-                  }}
-                  customTrigger={
-                    <button className="p-1 text-gray-300 hover:text-green-500 transition-colors" title="Mark as Paid">
-                      <CheckCircle2 className="w-5 h-5" />
-                    </button>
-                  }
-                >
-                  <button className="p-1 text-gray-300 hover:text-green-500 transition-colors" title="Mark as Paid">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </button>
-                </TransactionDialog>
+                />
               </div>
             </div>
           );
