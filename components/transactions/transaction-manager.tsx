@@ -282,58 +282,63 @@ export function TransactionManager({ initialTransactions, categories, activeMont
         />
       ) : (
         <div className="mb-4 space-y-3">
-          {/* Row 1: Type tabs (instant) + Add Transaction button */}
-          <div className="flex items-center justify-between gap-3">
-            {/* Type tabs — pure local state, zero network request */}
-            <div className="flex h-9 rounded-lg border border-gray-200 bg-white overflow-hidden text-sm font-medium shrink-0">
-              {TYPE_TABS.map(({ value, label }) => {
-                const count = value === "income" ? incomeCount : value === "expense" ? expenseCount : transactions.length;
-                return (
-                  <button
-                    key={value}
-                    onClick={() => handleTypeTab(value)}
-                    className={cn(
-                      "px-3 transition-colors flex items-center gap-1.5",
-                      typeTab === value
-                        ? value === "income"
-                          ? "bg-green-100 text-green-700"
-                          : value === "expense"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-[#1E6B4E]/10 text-[#1E6B4E]"
-                        : "text-gray-500 hover:bg-gray-50"
-                    )}
-                  >
-                    {label}
-                    {value !== "all" && (
-                      <span className={cn(
-                        "text-[10px] font-bold rounded-full px-1.5 py-0.5 tabular-nums leading-none",
+          {/* Row 1: Type tabs + filters + Add Transaction (all on one line, wraps gracefully) */}
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Left group: tabs + inline filters — grows to fill available space */}
+            <div className="flex items-center flex-wrap gap-3 flex-1 min-w-0">
+              {/* Type tabs — pure local state, zero network request */}
+              <div className="flex h-9 rounded-lg border border-gray-200 bg-white overflow-hidden text-sm font-medium shrink-0">
+                {TYPE_TABS.map(({ value, label }) => {
+                  const count = value === "income" ? incomeCount : value === "expense" ? expenseCount : transactions.length;
+                  return (
+                    <button
+                      key={value}
+                      onClick={() => handleTypeTab(value)}
+                      className={cn(
+                        "px-3 transition-colors flex items-center gap-1.5",
                         typeTab === value
                           ? value === "income"
-                            ? "bg-green-200/70 text-green-800"
-                            : "bg-red-200/70 text-red-800"
-                          : "bg-gray-100 text-gray-400"
-                      )}>
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+                            ? "bg-green-100 text-green-700"
+                            : value === "expense"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-[#1E6B4E]/10 text-[#1E6B4E]"
+                          : "text-gray-500 hover:bg-gray-50"
+                      )}
+                    >
+                      {label}
+                      {value !== "all" && (
+                        <span className={cn(
+                          "text-[10px] font-bold rounded-full px-1.5 py-0.5 tabular-nums leading-none",
+                          typeTab === value
+                            ? value === "income"
+                              ? "bg-green-200/70 text-green-800"
+                              : "bg-red-200/70 text-red-800"
+                            : "bg-gray-100 text-gray-400"
+                        )}>
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Search / period / category / export — rendered inline via display:contents */}
+              <TransactionFilters categories={filterCats} showExportMenu wrapperClassName="contents" />
             </div>
 
-            {/* Add Transaction — optimistic, instant UI update */}
-            <TransactionDialog
-              categories={categories}
-              activeMonth={activeMonth}
-              onOptimisticAdd={addOptimistic}
-              onOptimisticRemove={removeOptimistic}
-            />
+            {/* Add Transaction — pinned to the far right, never wraps early */}
+            <div className="shrink-0 ml-auto">
+              <TransactionDialog
+                categories={categories}
+                activeMonth={activeMonth}
+                onOptimisticAdd={addOptimistic}
+                onOptimisticRemove={removeOptimistic}
+              />
+            </div>
           </div>
 
-          {/* Row 2: Search / period / category / export filters */}
-          <TransactionFilters categories={filterCats} showExportMenu />
-
-          {/* Row 3: Select toggle + View toggle (List / Calendar) */}
+          {/* Row 2: Select toggle (left) + View toggle (right) */}
           <div className="flex items-center justify-between gap-3">
             <button
               type="button"
@@ -483,90 +488,115 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                           />
                         )}
 
-                        {/* Left cluster — category icon chip + details (constrained width
-                            so the amount can sit close to it, not at the page edge) */}
-                        <div className="flex items-center gap-3 min-w-0 max-w-[520px] flex-1">
-                          <div
-                            className={cn(
-                              "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-                              (!txn.category_user_id || !txn.category_color) && "bg-gray-100 text-gray-600"
-                            )}
-                            style={
-                              txn.category_user_id && txn.category_color
-                                ? {
-                                    backgroundColor: `${txn.category_color}1f`,
-                                    color: txn.category_color,
-                                  }
-                                : undefined
-                            }
-                          >
-                            {Icon ? (
-                              <Icon className="size-4" />
-                            ) : (
-                              <span className={cn(
-                                "h-2 w-2 rounded-full",
-                                isIncome ? "bg-green-500" : "bg-red-500"
-                              )} />
-                            )}
-                          </div>
-
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {txn.description || txn.category_name || "—"}
-                              {isOptimistic && (
-                                <span className="ml-1.5 text-[10px] text-gray-400 font-normal">saving…</span>
+                        {/* Strict 4-column grid — Col widths: 50% | 15% | 20% | 15% */}
+                        <div
+                          className="grid flex-1 min-w-0 items-center gap-x-3"
+                          style={{ gridTemplateColumns: "2fr 0.6fr 0.8fr 0.6fr" }}
+                        >
+                          {/* Col 1 — Context (50%): icon + description + date + category pill */}
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className={cn(
+                                "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                                (!txn.category_user_id || !txn.category_color) && "bg-gray-100 text-gray-600"
                               )}
-                            </p>
-                            <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
-                              {txn.category_name && (
-                                <span className="truncate">{txn.category_name}</span>
-                              )}
-                              <span aria-hidden className="text-gray-300">·</span>
-                              <span className="shrink-0">
-                                {new Date(txn.date + "T00:00:00").toLocaleDateString("en-IN", {
-                                  day: "numeric", month: "short", year: "numeric",
-                                })}
-                              </span>
-                              {paymentLabel && (
-                                <>
-                                  <span aria-hidden className="text-gray-300">·</span>
-                                  <span className="inline-flex items-center rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600">
-                                    {paymentLabel}
-                                  </span>
-                                </>
+                              style={
+                                txn.category_user_id && txn.category_color
+                                  ? {
+                                      backgroundColor: `${txn.category_color}1f`,
+                                      color: txn.category_color,
+                                    }
+                                  : undefined
+                              }
+                            >
+                              {Icon ? (
+                                <Icon className="size-4" />
+                              ) : (
+                                <span className={cn(
+                                  "h-2 w-2 rounded-full",
+                                  isIncome ? "bg-green-500" : "bg-red-500"
+                                )} />
                               )}
                             </div>
+
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {txn.description || txn.category_name || "—"}
+                                {isOptimistic && (
+                                  <span className="ml-1.5 text-[10px] text-gray-400 font-normal">saving…</span>
+                                )}
+                              </p>
+                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                <span className="text-xs text-gray-400 shrink-0 tabular-nums">
+                                  {new Date(txn.date + "T00:00:00").toLocaleDateString("en-IN", {
+                                    day: "numeric", month: "short", year: "numeric",
+                                  })}
+                                </span>
+                                {txn.category_name && (
+                                  <span
+                                    className={cn(
+                                      "inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold leading-none",
+                                      txn.category_user_id && txn.category_color
+                                        ? ""
+                                        : "bg-gray-100 text-gray-500"
+                                    )}
+                                    style={
+                                      txn.category_user_id && txn.category_color
+                                        ? {
+                                            backgroundColor: `${txn.category_color}1a`,
+                                            color: txn.category_color,
+                                          }
+                                        : undefined
+                                    }
+                                  >
+                                    {txn.category_name}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Col 2 — Method (15%): payment method pill, centered */}
+                          <div className="flex justify-center">
+                            {paymentLabel ? (
+                              <span className="inline-flex items-center rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600 leading-none">
+                                {paymentLabel}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-300 select-none">—</span>
+                            )}
+                          </div>
+
+                          {/* Col 3 — Amount (20%): right-aligned, income green / expense red */}
+                          <div className="text-right">
+                            <span className={cn(
+                              "text-sm font-semibold tabular-nums",
+                              isIncome ? "text-green-600" : "text-red-600"
+                            )}>
+                              {isIncome ? "+" : "-"}{formatINR(txn.amount)}
+                            </span>
+                          </div>
+
+                          {/* Col 4 — Actions (15%): edit + delete pinned to far right */}
+                          <div className="flex items-center justify-end gap-0.5">
+                            {!isOptimistic && (
+                              <>
+                                <TransactionDialog
+                                  categories={categories}
+                                  transaction={{
+                                    id: txn.id,
+                                    type: txn.type,
+                                    amount: txn.amount,
+                                    category_id: txn.category_id,
+                                    description: txn.description,
+                                    date: txn.date,
+                                  }}
+                                />
+                                <DeleteTransactionButton id={txn.id} />
+                              </>
+                            )}
                           </div>
                         </div>
-
-                        {/* Amount — pulled inward, sits next to details */}
-                        <span className={cn(
-                          "text-sm font-semibold tabular-nums shrink-0 min-w-[110px]",
-                          isIncome ? "text-green-600" : "text-red-600"
-                        )}>
-                          {isIncome ? "+" : "-"}{formatINR(txn.amount)}
-                        </span>
-
-                        {/* Spacer pushes edit/delete to the far right edge */}
-                        <div className="flex-1" />
-
-                        {/* Edit / Delete — pinned far right */}
-                        {!isOptimistic && (
-                          <div className="flex items-center gap-0.5 shrink-0">
-                            <TransactionDialog
-                              categories={categories}
-                              transaction={{
-                                id: txn.id,
-                                type: txn.type,
-                                amount: txn.amount,
-                                category_id: txn.category_id,
-                                description: txn.description,
-                                date: txn.date,
-                              }}
-                            />
-                            <DeleteTransactionButton id={txn.id} />
-                          </div>
-                        )}
                       </li>
                     );
                   })}

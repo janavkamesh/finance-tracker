@@ -27,9 +27,11 @@ const PERIODS: SelectOption[] = [
 export function TransactionFilters({
   categories,
   showExportMenu = false,
+  wrapperClassName,
 }: {
   categories: Category[];
   showExportMenu?: boolean;
+  wrapperClassName?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -123,10 +125,14 @@ export function TransactionFilters({
 
   return (
     <div
-      className={cn(
-        "flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap transition-opacity",
-        isPending && "opacity-90",
-      )}
+      className={
+        wrapperClassName !== undefined
+          ? wrapperClassName
+          : cn(
+              "flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap transition-opacity",
+              isPending && "opacity-90",
+            )
+      }
       data-pending={isPending ? "true" : undefined}
     >
       {/* Search */}

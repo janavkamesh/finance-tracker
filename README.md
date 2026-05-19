@@ -2107,3 +2107,30 @@ Expanded `/goals` (`app/(dashboard)/goals/page.tsx`) from a single-purpose savin
 - **Premium Empty State (Bills)**: When no recurring bills exist, the card renders a centred calendar icon in a `bg-[#1E6B4E]/10` chip, a bold "No recurring bills added yet" headline, supporting copy explaining the payoff ("automate logging and see what's coming up on the dashboard"), and a primary `+ Add your first bill` CTA â€” using the same `RecurringDialog` trigger but with a friendlier `triggerLabel`. Goals's empty state was harmonised to the same layout so the two empty states read as siblings.
 - **Vertical Hierarchy & Breathing Room**: The three sections now stack inside an `mx-auto w-full max-w-3xl space-y-8` column. `space-y-8` (32px) between sections gives generous breathing room without feeling sparse, and the centered max-width keeps line-length comfortable on wide monitors â€” matching the constrained-column treatment used on Settings.
 - **`RecurringDialog.triggerLabel` Prop**: Added an optional `triggerLabel` string that defaults to `"Add recurring"` and renders inside the existing `<Plus className="size-4" />` trigger. Goals passes `"Add Bill"` (top-of-section header) and `"Add your first bill"` (empty-state CTA); all other call sites stay unchanged.
+
+---
+
+## Phase 71 — Transactions Page: 2-Row Control Area Compression
+
+### Feature
+Compressed the Transactions page control area from three scattered rows into a tight, space-efficient 2-row layout.
+
+### UX Design & Changes
+- **Row 1 — Tabs + Filters + Primary Action**: The "All / Income / Expense" type tabs, the Search bar, Month dropdown, Category dropdown, and the 3-dot export menu are now co-located on the same horizontal line. The "+ Add Transaction" button is pinned to the far right via `ml-auto`. A `flex-wrap gap-4` outer container ensures graceful wrapping on smaller laptop screens — the filters wrap before the Add button is ever displaced.
+- **Row 2 — Bulk Actions & View Toggles**: The Select (bulk action) toggle sits on the far left; the List / Calendar view toggle sits on the far right, aligned via `justify-between`. The row is visually lighter now that the filters no longer compete for the same line.
+- **Implementation**: Added a `wrapperClassName` prop to `TransactionFilters` (`components/transactions/transaction-filters.tsx`). When `wrapperClassName="contents"` is passed, the filter wrapper uses CSS `display: contents` so its children (Search, Period, Category, kebab menu) participate directly in the parent flex container, rendering inline with the tabs as true flex siblings. Restructured `transaction-manager.tsx` to the new 2-row DOM structure accordingly.
+
+---
+
+## Phase 72 — Transactions Page: Strict 4-Column Grid Row Layout
+
+### Feature
+Replaced the ad-hoc flex layout on individual transaction rows with a strict CSS Grid to lock alignment across all rows regardless of content length.
+
+### UX Design & Changes
+- **Grid proportions**: `gridTemplateColumns: "2fr 0.6fr 0.8fr 0.6fr"` — resolves to 50% / 15% / 20% / 15% across the full row width.
+- **Col 1 — Context (50%)**: Category icon chip + description (bold primary text) on top; date and category pill on the subtitle line. The category pill now uses the category's brand color as a tinted background chip (same `color + 1a` alpha as the icon chip) for immediate visual association.
+- **Col 2 — Method (15%, centered)**: Payment method pill (UPI / Card / Cash etc.) isolated in its own column. Renders an em-dash placeholder when no method is recorded, keeping the column width stable.
+- **Col 3 — Amount (20%, right-aligned)**: Income shown in `text-green-600` with `+` prefix; expenses in `text-red-600` with `-` prefix. Right-aligned `tabular-nums` ensures amounts stack cleanly.
+- **Col 4 — Actions (15%, right-aligned)**: Edit and Delete icon buttons pinned to the far right edge via `justify-end`. Hidden for optimistic rows.
+- **Checkbox compatibility**: The selection-mode checkbox remains as a leading flex item outside the grid so it does not disturb column proportions when toggled.
