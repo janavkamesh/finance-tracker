@@ -158,7 +158,7 @@ export default async function ReportsPage({
 
         {/* Monthly breakdown table */}
         <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-50">
+          <div className="px-5 py-4 border-b border-gray-100 dark:border-white/5">
             <h2 className="text-sm font-semibold text-gray-900">Monthly breakdown</h2>
           </div>
           {tableRows.every((r) => r.income === 0 && r.expense === 0) ? (
@@ -169,14 +169,14 @@ export default async function ReportsPage({
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-50">
+                  <tr className="border-b border-gray-100 dark:border-white/5">
                     <th className="px-5 py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Month</th>
                     <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-400 uppercase tracking-wide">Income</th>
                     <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-400 uppercase tracking-wide">Expenses</th>
                     <th className="px-5 py-2.5 text-right text-xs font-medium text-gray-400 uppercase tracking-wide">Net</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                   {tableRows.map((row) => {
                     const net = row.income - row.expense;
                     const hasData = row.income > 0 || row.expense > 0;

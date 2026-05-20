@@ -46,7 +46,7 @@ export default function DashboardLoading() {
 
       {/* Recent transactions */}
       <div className="rounded-2xl border border-gray-100 bg-white">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/5">
           <Skeleton className="h-4 w-36" />
           <Skeleton className="h-4 w-14" />
         </div>

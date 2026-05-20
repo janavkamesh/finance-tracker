@@ -2486,3 +2486,7 @@ Three changes to `components/settings/recurring-dialog.tsx` and `lib/validations
 **Field order**: Reordered to match the Add Transaction dialog — Amount first, Category second, Description third. Improves cognitive consistency across both dialogs.
 
 **Description optional**: Removed `.min(1, "Description is required")` from `recurringSchema` in `lib/validations/recurring.ts`. Description accepts empty string; the label now shows "(optional)" in muted grey. Form submits without description; the server action receives `""` when left blank.
+
+
+### Dark mode divider polish — eliminate harsh white separator lines
+All `divide-gray-50` and `border-gray-50` utility classes lacked dark-mode variants, causing them to render as near-white `#f9fafb` lines against the dark background. Fixed across every affected file by upgrading to `divide-gray-100 dark:divide-white/5` and `border-gray-100 dark:border-white/5`, matching the subtle `rgba(255,255,255,0.07)` already used by `--border-default`. Files changed: `transaction-manager.tsx`, `goals/page.tsx`, `category-section.tsx`, `reports/page.tsx`, and all four `loading.tsx` skeleton screens.

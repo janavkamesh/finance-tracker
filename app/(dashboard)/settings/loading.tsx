@@ -25,14 +25,14 @@ export default function SettingsLoading() {
 
       {/* Categories section */}
       <section className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-white/5">
           <div>
             <Skeleton className="h-4 w-32 mb-1.5" />
             <Skeleton className="h-3 w-52" />
           </div>
           <Skeleton className="h-9 w-32 rounded-lg" />
         </div>
-        <div className="divide-y divide-gray-50">
+        <div className="divide-y divide-gray-100 dark:divide-white/5">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3 px-6 py-3.5">
               <Skeleton className="h-3 w-3 rounded-full" />

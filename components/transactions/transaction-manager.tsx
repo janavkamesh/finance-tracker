@@ -503,8 +503,7 @@ export function TransactionManager({ initialTransactions, categories, activeMont
 
           <div
             key={liveSearch}
-            className="divide-y animate-in fade-in duration-200"
-            style={{ borderColor: 'var(--border-default)' }}
+            className="divide-y divide-gray-100 dark:divide-white/5 animate-in fade-in duration-200"
           >
             {Object.entries(groupedTransactions).map(([dateLabel, txns]) => (
               <div key={dateLabel}>
@@ -524,7 +523,7 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                   </h3>
                 </div>
 
-                <ul className="divide-y divide-gray-50">
+                <ul className="divide-y divide-gray-100 dark:divide-white/5">
                   {txns.map((txn) => {
                     const isIncome  = txn.type === "income";
                     const isSelected = selectedIds.has(txn.id);
@@ -669,7 +668,7 @@ export function TransactionManager({ initialTransactions, categories, activeMont
           {/* Infinite scroll sentinel + skeleton */}
           <div ref={loadMoreRef} className="w-full">
             {isFetching && (
-              <div className="px-4 py-4 animate-pulse border-t border-gray-50 flex items-center gap-3">
+              <div className="px-4 py-4 animate-pulse border-t border-gray-100 dark:border-white/5 flex items-center gap-3">
                 <div className="h-4 w-4 bg-gray-200 rounded shrink-0" />
                 <div className="h-2 w-2 bg-gray-200 rounded-full shrink-0" />
                 <div className="flex-1">

@@ -86,7 +86,7 @@ export default async function GoalsPage() {
   // ── Unified card chrome ─────────────────────────────────────────
   // Every section on this page uses these exact classes.
   const cardClass = "rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden";
-  const headerClass = "flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-50";
+  const headerClass = "flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/5";
 
   return (
     <>
@@ -147,7 +147,7 @@ export default async function GoalsPage() {
             </div>
           ) : (
             /* Bill list — scrolls internally if entries exceed the card height */
-            <ul className="flex-1 overflow-y-auto divide-y divide-gray-50 min-h-0">
+            <ul className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-white/5 min-h-0">
               {recurringList.map((r) => {
                 const cat = r.categories as unknown as { name: string } | null;
                 const isIncome = r.type === "income";
@@ -361,7 +361,7 @@ export default async function GoalsPage() {
             </div>
 
             {/* Summary strip */}
-            <div className="grid grid-cols-3 divide-x divide-gray-50 border-b border-gray-50">
+            <div className="grid grid-cols-3 divide-x divide-gray-100 dark:divide-white/5 border-b border-gray-100 dark:border-white/5">
               <div className="px-4 py-3.5 text-center">
                 <p className="text-xs text-gray-400 mb-1">Total Assets</p>
                 <p className="text-base font-bold text-green-600 tabular-nums">
@@ -397,7 +397,7 @@ export default async function GoalsPage() {
                 </p>
               </div>
             ) : (
-              <ul className="divide-y divide-gray-50">
+              <ul className="divide-y divide-gray-100 dark:divide-white/5">
                 {allAccounts.map((account) => {
                   const isLiability = (LIABILITY_TYPES as readonly string[]).includes(account.type);
                   const label =

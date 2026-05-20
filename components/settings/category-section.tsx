@@ -84,7 +84,7 @@ export function CategorySection({
 
   return (
     <section className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-white/5">
         <div>
           <h2 className="text-sm font-semibold text-gray-900">Custom categories</h2>
           <p className="text-xs text-gray-500 mt-0.5">
@@ -102,7 +102,7 @@ export function CategorySection({
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-gray-50">
+        <ul className="divide-y divide-gray-100 dark:divide-white/5">
           {categories.map((cat) => {
             const CatIcon = getCategoryIcon(cat);
             const isConfirming = confirmingId === cat.id;

@@ -35,7 +35,7 @@ export default function TransactionsLoading() {
         {Array.from({ length: 8 }).map((_, i) => (
           <div
             key={i}
-            className="flex items-center gap-4 px-5 py-4 border-b last:border-0 border-gray-50"
+            className="flex items-center gap-4 px-5 py-4 border-b last:border-0 border-gray-100 dark:border-white/5"
           >
             <Skeleton className="h-2 w-2 rounded-full" />
             <div className="flex-1 space-y-1.5">

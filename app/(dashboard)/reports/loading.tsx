@@ -32,10 +32,10 @@ export default function ReportsLoading() {
       {/* Bottom two columns */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-50">
+          <div className="px-5 py-4 border-b border-gray-100 dark:border-white/5">
             <Skeleton className="h-4 w-36" />
           </div>
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-gray-100 dark:divide-white/5">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="flex items-center justify-between px-5 py-3">
                 <Skeleton className="h-4 w-10" />
