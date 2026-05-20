@@ -352,7 +352,6 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
         <DialogContent
           className="sm:max-w-md"
           onClose={() => setOpen(false)}
-          onPointerDownOutside={(e) => e.preventDefault()}
         >
           <DialogHeader>
             <DialogTitle>
