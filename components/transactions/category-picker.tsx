@@ -78,11 +78,19 @@ export function CategoryPicker({
   // Merge server + locally-created categories, apply type filter on local ones,
   // remove any client-side deleted IDs, and sort alphabetically so optimistic
   // entries land in the correct position immediately.
+  //
+  // serverIds dedup: when the server action returns and revalidatePath triggers
+  // an RSC re-render, the same category can exist in both `categories` (server)
+  // and `localCategories` (after the tempId→realId swap), causing duplicate
+  // React keys and broken delete behavior. Filtering local entries whose ID is
+  // already in the server list prevents this.
   const allCategories = useMemo(() => {
+    const serverIds = new Set(categories.map((c) => c.id));
     const base = categories.filter((c) => !deletedIds.has(c.id));
     const local = localCategories.filter(
       (c) =>
         !deletedIds.has(c.id) &&
+        !serverIds.has(c.id) &&
         (!transactionType || c.type === transactionType || c.type === "both"),
     );
     return [...base, ...local].sort((a, b) =>
