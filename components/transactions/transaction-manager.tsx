@@ -870,7 +870,7 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                       </h3>
                     </div>
 
-                    <ul className="divide-y divide-gray-50">
+                    <ul className="divide-y divide-black/[0.05] dark:divide-white/[0.05]">
                       {txns.map((txn) => {
                         const isIncome   = txn.type === "income";
                         const isSelected = selectedIds.has(txn.id);

@@ -285,7 +285,7 @@ export function CategoryPicker({
             </div>
 
             {/* ── Category list ── */}
-            <div className="max-h-64 overflow-y-auto divide-y divide-gray-50/80">
+            <div className="max-h-64 overflow-y-auto divide-y divide-black/[0.05] dark:divide-white/[0.05]">
               {filtered.length === 0 ? (
                 <p className="px-4 py-8 text-center text-sm text-gray-400">
                   No categories found
