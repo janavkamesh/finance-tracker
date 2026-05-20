@@ -415,7 +415,8 @@ export function TransactionManager({ initialTransactions, categories, activeMont
       {/* ── Empty state ────────────────────────────────────────────── */}
       {displayedTransactions.length === 0 && (
         <div
-          className="flex flex-col items-center justify-center rounded-2xl border border-dashed py-16 text-center px-6"
+          key={`empty-${liveSearch}`}
+          className="flex flex-col items-center justify-center rounded-2xl border border-dashed py-16 text-center px-6 animate-in fade-in duration-200"
           style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}
         >
           <div className="flex h-12 w-12 items-center justify-center rounded-full mb-4" style={{ background: 'var(--tag-bg)' }}>
@@ -488,7 +489,11 @@ export function TransactionManager({ initialTransactions, categories, activeMont
             </div>
           </div>
 
-          <div className="divide-y" style={{ borderColor: 'var(--border-default)' }}>
+          <div
+            key={liveSearch}
+            className="divide-y animate-in fade-in duration-200"
+            style={{ borderColor: 'var(--border-default)' }}
+          >
             {Object.entries(groupedTransactions).map(([dateLabel, txns]) => (
               <div key={dateLabel}>
                 {/* Date group sub-header */}

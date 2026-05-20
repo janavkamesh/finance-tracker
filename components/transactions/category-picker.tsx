@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef, useTransition } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   Search, X, Check, ChevronDown, Plus, ArrowLeft,
@@ -41,7 +41,7 @@ const ICON_LIST: Array<{ key: string; Icon: LucideIcon }> = Object.entries(
 ).map(([key, Icon]) => ({ key, Icon }));
 
 const PRESET_COLORS = [
-  "#1E6B4E", "#2563EB", "#DC2626", "#D97706",
+  "#6B7280", "#2563EB", "#DC2626", "#D97706",
   "#7C3AED", "#EC4899", "#0D9488", "#92400E",
 ];
 
@@ -64,7 +64,6 @@ export function CategoryPicker({
 
   // Deletion state
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
   // Create-category form state
@@ -72,7 +71,6 @@ export function CategoryPicker({
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
   const [newName, setNewName] = useState("");
   const [nameError, setNameError] = useState("");
-  const [isPending, startTransition] = useTransition();
 
   const searchRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -152,59 +150,78 @@ export function CategoryPicker({
     }
     setNameError("");
 
-    startTransition(async () => {
-      const result = await createCategory({
-        name: newName.trim(),
-        color: selectedColor,
-        icon: selectedIconKey,
-        // New categories inherit the active tab type — never "both"
-        type: transactionType ?? "expense",
-      });
+    const name = newName.trim();
+    const tempId = `opt-cat-${Date.now()}`;
+    const optimisticCat: Category = {
+      id: tempId,
+      name,
+      type: transactionType ?? "expense",
+      color: selectedColor,
+      icon: selectedIconKey,
+      user_id: "pending", // truthy → renders as user category with colour
+      created_at: new Date().toISOString(),
+    };
 
-      if (result.error) {
-        setNameError(result.error);
-        return;
-      }
+    // ── Optimistic: update UI immediately — zero perceived latency ────
+    setLocalCategories((prev) => [...prev, optimisticCat]);
+    if (selectAndClose) {
+      onChange(tempId);
+      handleClose();
+    } else {
+      setView("list");
+    }
 
-      if (result.data) {
-        const newCat: Category = {
-          id: result.data.id,
-          name: result.data.name,
-          type: result.data.type as "income" | "expense" | "both",
-          color: result.data.color,
-          icon: result.data.icon,
-          user_id: result.data.user_id,
-          created_at: result.data.created_at,
-        };
-        setLocalCategories((prev) => [...prev, newCat]);
-
-        if (selectAndClose) {
-          onChange(result.data.id);
-          handleClose();
-        } else {
-          setView("list");
-        }
-      }
+    // ── Background: confirm with server ───────────────────────────────
+    const result = await createCategory({
+      name,
+      color: selectedColor,
+      icon: selectedIconKey,
+      type: transactionType ?? "expense",
     });
+
+    if (result.error) {
+      // Rollback optimistic entry
+      setLocalCategories((prev) => prev.filter((c) => c.id !== tempId));
+      if (selectAndClose) onChange("");
+      toast.error(result.error);
+      return;
+    }
+
+    if (result.data) {
+      const realCat: Category = {
+        id: result.data.id,
+        name: result.data.name,
+        type: result.data.type as "income" | "expense" | "both",
+        color: result.data.color,
+        icon: result.data.icon,
+        user_id: result.data.user_id,
+        created_at: result.data.created_at,
+      };
+      // Swap temp ID → real ID silently
+      setLocalCategories((prev) =>
+        prev.map((c) => (c.id === tempId ? realCat : c))
+      );
+      if (selectAndClose) onChange(result.data.id);
+    }
   }
 
   async function handleDelete(catId: string) {
-    setIsDeleting(true);
-    try {
-      const result = await safeDeleteCategory(catId);
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-      // Optimistically remove from local state
-      setDeletedIds((prev) => new Set([...prev, catId]));
-      setLocalCategories((prev) => prev.filter((c) => c.id !== catId));
-      // Clear form selection if this category was selected
-      if (value === catId) onChange("");
-      setConfirmingDeleteId(null);
-      toast.success("Category deleted");
-    } finally {
-      setIsDeleting(false);
+    // ── Optimistic: remove from UI immediately — zero perceived latency ──
+    setDeletedIds((prev) => new Set([...prev, catId]));
+    setLocalCategories((prev) => prev.filter((c) => c.id !== catId));
+    if (value === catId) onChange("");
+    setConfirmingDeleteId(null);
+
+    // ── Background: confirm with server ─────────────────────────────────
+    const result = await safeDeleteCategory(catId);
+    if (result.error) {
+      // Rollback — put the category back by removing it from deletedIds
+      setDeletedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(catId);
+        return next;
+      });
+      toast.error(result.error);
     }
   }
 
@@ -372,15 +389,13 @@ export function CategoryPicker({
                         <div className="flex items-center gap-1.5 shrink-0">
                           <button
                             type="button"
-                            disabled={isDeleting}
                             onClick={() => handleDelete(cat.id)}
-                            className="rounded-md bg-red-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-600 disabled:opacity-60 transition-colors"
+                            className="rounded-md bg-red-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-600 transition-colors"
                           >
-                            {isDeleting ? "…" : "Delete"}
+                            Delete
                           </button>
                           <button
                             type="button"
-                            disabled={isDeleting}
                             onClick={() => setConfirmingDeleteId(null)}
                             className="rounded-md px-2 py-1 text-[11px] font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
                           >
@@ -521,11 +536,10 @@ export function CategoryPicker({
               {/* Save button */}
               <button
                 type="button"
-                disabled={isPending}
                 onClick={() => handleCreate(false)}
-                className="w-full rounded-lg bg-[#1E6B4E] py-2 text-sm font-semibold text-white transition-colors hover:bg-[#165a41] disabled:opacity-60"
+                className="w-full rounded-lg bg-[#1E6B4E] py-2 text-sm font-semibold text-white transition-colors hover:bg-[#165a41]"
               >
-                {isPending ? "Saving…" : "Save"}
+                Save
               </button>
             </div>
           </>

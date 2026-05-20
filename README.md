@@ -2407,3 +2407,57 @@ Both pages now render identical card chrome (`rounded-xl border border-gray-100 
 └─────────────────────┘
 ```
 Today's date shows as a filled green circle (`bg-[#1E6B4E] text-white`). Sunday dates are red, Saturday dates are green — matching day-header colours.
+
+---
+
+## Phase 85 — Input alignment & heading typography parity
+
+### Quick Add Strip — Category dropdown left-alignment
+`CustomSelect` placeholder span changed from `text-center` to `text-left` so the unselected placeholder text aligns flush-left, matching every other field in the strip (Amount, Payment Method, Description).
+
+### Home greeting — typography match with section headings
+`DynamicGreeting` heading upgraded from `text-lg` → `text-xl font-bold` and subtitle from `text-xs` → `text-sm` to exactly match the `Transactions` page sticky header (`text-xl font-bold text-gray-900` / `text-sm text-gray-500`). Tab-switching between Home and other sections now feels visually consistent.
+
+---
+
+## Phase 86 — Search responsiveness & results fade-in
+
+### Instant search (debounce 350ms → 50ms)
+`TransactionFilters` search debounce reduced from 350 ms to 50 ms. Since `TransactionManager` reads `liveSearch` directly from `useSearchParams()` and applies client-side filtering in a `useMemo`, the transaction list now re-filters within one keypress (~50 ms) rather than waiting 350 ms. The underlying `startTransition` wrapper keeps server re-renders non-blocking.
+
+### Smooth results fade-in (animate-in fade-in duration-200)
+Added `key={liveSearch}` + `animate-in fade-in duration-200` (`tailwindcss-animate`) to the transactions body `div` inside the list card. Every time the search term changes, React unmounts and remounts that element, replaying the 200 ms opacity animation — results flow in gently instead of snapping into place. The same animation is applied to the empty-state panel for visual consistency.
+
+---
+
+## Phase 87 — Goals page two-column layout
+
+### Layout refactor: single-column stack → two-column grid
+Replaced the centred `max-w-3xl space-y-8` wrapper with a full-width `grid grid-cols-1 lg:grid-cols-2 gap-6` grid:
+
+| Column | Content |
+|---|---|
+| Left (col 1) | Recurring Bills & Subscriptions — full-height card, bills scroll internally (`flex-1 overflow-y-auto`) |
+| Right (col 2) | Financial Goals (top) + Net Worth (bottom) — stacked with `flex flex-col gap-6` |
+
+CSS grid default `align-items: stretch` makes the left card grow to match the right column's total height — no empty gap at the bottom of the Recurring Bills card. The empty state inside uses `flex-1 flex flex-col items-center justify-center` so the icon + CTA is always vertically centred within that available height. Everything fits above the fold in a single viewport; no page-level scrolling needed on desktop.
+
+---
+
+## Phase 88 — Category picker: neutral grey default, optimistic create & delete
+
+### Neutral grey as first colour swatch (`#6B7280`)
+`PRESET_COLORS[0]` changed from brand green `#1E6B4E` to `#6B7280` (Tailwind `gray-500`). All system icons render in neutral grey, so the first colour option now matches that natural default state. The remaining seven colours follow in the same order. `selectedColor` and `defaultValues` both initialise from `PRESET_COLORS[0]`, so new categories default to grey automatically.
+
+### Optimistic category create (zero-latency Save button)
+`handleCreate` rewritten — `startTransition` / `isPending` removed. On click:
+1. A temp category (`opt-cat-<timestamp>`) is added to `localCategories` immediately.
+2. The view switches to list (or picker closes) **before** any network call.
+3. The server call runs in the background; on success the temp ID is silently swapped for the real UUID; on failure the optimistic entry is removed and an error toast is shown.
+The Save button is no longer `disabled` or shows "Saving…" — it responds the instant it is clicked.
+
+### Optimistic category delete (zero-latency Delete button)
+`handleDelete` rewritten — `isDeleting` state removed. On click:
+1. The category ID is added to `deletedIds` and removed from `localCategories` immediately — the row disappears at once.
+2. The server call runs in the background; on failure the ID is removed from `deletedIds` (row reappears) and an error toast is shown.
+The Delete confirm button is no longer `disabled` or shows "…".

@@ -87,7 +87,7 @@ export function TransactionFilters({
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       updateParam("search", searchValue.trim());
-    }, 350);
+    }, 50);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
