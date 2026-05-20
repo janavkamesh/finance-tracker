@@ -237,7 +237,10 @@ export function RecurringDialog({ categories, recurring, triggerVariant = "prima
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent
+          className="sm:max-w-md"
+          onPointerDownOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>{isEdit ? "Edit Recurring" : "Add Recurring Transaction"}</DialogTitle>
           </DialogHeader>

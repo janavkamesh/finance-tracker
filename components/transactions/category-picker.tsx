@@ -76,7 +76,8 @@ export function CategoryPicker({
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Merge server + locally-created categories, apply type filter on local ones,
-  // and remove any client-side deleted IDs.
+  // remove any client-side deleted IDs, and sort alphabetically so optimistic
+  // entries land in the correct position immediately.
   const allCategories = useMemo(() => {
     const base = categories.filter((c) => !deletedIds.has(c.id));
     const local = localCategories.filter(
@@ -84,7 +85,9 @@ export function CategoryPicker({
         !deletedIds.has(c.id) &&
         (!transactionType || c.type === transactionType || c.type === "both"),
     );
-    return [...base, ...local];
+    return [...base, ...local].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+    );
   }, [categories, localCategories, deletedIds, transactionType]);
 
   const selected = allCategories.find((c) => c.id === value);

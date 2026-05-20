@@ -349,7 +349,11 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md" onClose={() => setOpen(false)}>
+        <DialogContent
+          className="sm:max-w-md"
+          onClose={() => setOpen(false)}
+          onPointerDownOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>
               {isEdit ? "Edit Transaction" : "Add Transaction"}
