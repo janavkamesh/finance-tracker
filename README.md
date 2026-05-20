@@ -2527,3 +2527,7 @@ Fix: introduced a single semantic design token `--chart-grid` into `globals.css`
 
 ### Dashboard chart cards — heading-to-chart breathing room
 Both dashboard chart cards (`TrendChartCard` / bar chart and `CategoryPieChart` / donut) had `mb-2` (8 px) between their card header row and the chart body. The Recharts `ResponsiveContainer` renders its first Y-axis tick flush at the container top, making the "Weekly trend" / "This month's expenses" titles feel visually attached to the chart rather than leading it. Changed `mb-2` → `mb-4` (16 px) in both components simultaneously — 16 px is the standard header-to-content gap in compact data cards and gives the chart enough clearance to read as a distinct content region. Both cards were updated together to preserve their horizontal alignment on the dashboard.
+
+
+### Transactions — remove duplicate payment method label under amount
+The payment method (e.g. "UPI") was rendering twice in every transaction row of the master list in `transaction-manager.tsx`: once correctly as a pill badge inside the meta row (category · date · UPI), and again as plain right-aligned text stacked below the amount figure. Removed the second block (lines 994-998) so the amount column shows only the currency value. The meta-row pill remains unchanged.
