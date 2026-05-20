@@ -416,7 +416,7 @@ export function TransactionCalendar({
                 <div
                   key={`empty-${idx}`}
                   className={cn(
-                    "min-h-[76px] border-r border-b border-gray-100 bg-gray-50/40",
+                    "min-h-[76px] border-r border-b border-gray-100",
                     isSaturday && "border-r-0",
                     isLastRow && "border-b-0"
                   )}
@@ -444,20 +444,12 @@ export function TransactionCalendar({
                   "relative min-h-[76px] flex flex-col p-2 cursor-pointer transition-colors border-r border-b border-gray-100",
                   isSaturday && "border-r-0",
                   isLastRow && "border-b-0",
-                  isToday
-                    ? "bg-[#1E6B4E]/[0.04]"
-                    : hasBoth
-                      ? "hover:bg-gray-50/80"
-                      : hasExpense
-                        ? "bg-red-50/30 hover:bg-red-50/60"
-                        : hasIncome
-                          ? "bg-green-50/30 hover:bg-green-50/60"
-                          : "hover:bg-gray-50/60"
+                  "hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
                 )}
               >
-                {/* Today indicator — ring inset */}
+                {/* Today indicator — crisp inset border */}
                 {isToday && (
-                  <div className="absolute inset-0 ring-inset ring-1 ring-[#1E6B4E]/25 pointer-events-none rounded-none" />
+                  <div className="absolute inset-0 ring-inset ring-2 ring-[#1E6B4E]/40 pointer-events-none" />
                 )}
 
                 {/* Date number — top-left */}
