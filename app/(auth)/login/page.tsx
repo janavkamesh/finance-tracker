@@ -4,12 +4,18 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { signIn as nextAuthSignIn } from "next-auth/react";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 import { signIn } from "@/actions/auth";
-import { createClient } from "@/lib/supabase/client";
 import { DashboardPreview } from "@/components/auth/dashboard-preview";
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+
+  // Show NextAuth error messages surfaced via ?error= query param
+  const oauthError = searchParams.get("error");
+
   const {
     register,
     handleSubmit,
@@ -26,15 +32,16 @@ export default function LoginPage() {
     if (result?.error) toast.error(result.error);
   }
 
-  async function handleGoogleSignIn() {
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
+  /**
+   * Initiates the Google OAuth flow via NextAuth.
+   *
+   * callbackUrl points to our session-bridge route which exchanges the Google
+   * id_token for a Supabase session before redirecting to /dashboard.
+   */
+  function handleGoogleSignIn() {
+    nextAuthSignIn("google", {
+      callbackUrl: "/api/auth/nextauth-callback",
     });
-    if (error) toast.error(error.message);
   }
 
   return (
@@ -55,6 +62,13 @@ export default function LoginPage() {
 
           {/* Card */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-7">
+            {/* OAuth error banner */}
+            {oauthError && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700">
+                Google sign-in failed — please try again or use email / password.
+              </div>
+            )}
+
             {/* Google button */}
             <button
               type="button"

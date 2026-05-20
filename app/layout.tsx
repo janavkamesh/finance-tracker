@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/layout/theme-provider";
+import { NextAuthProvider } from "@/components/providers/next-auth-provider";
 import "./globals.css";
 
 const inter = Inter({
@@ -36,17 +37,25 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <ThemeProvider>
-          {children}
-          <Toaster
-            richColors
-            position="bottom-right"
-            offset={24}
-            toastOptions={{
-              style: { zIndex: 9999 },
-            }}
-          />
-        </ThemeProvider>
+        {/*
+          NextAuthProvider must wrap ThemeProvider (and everything else) so that
+          useSession() is available anywhere in the tree, including inside themed
+          components.  It is a Client Component boundary; ThemeProvider and the
+          page tree remain Server Components where possible.
+        */}
+        <NextAuthProvider>
+          <ThemeProvider>
+            {children}
+            <Toaster
+              richColors
+              position="bottom-right"
+              offset={24}
+              toastOptions={{
+                style: { zIndex: 9999 },
+              }}
+            />
+          </ThemeProvider>
+        </NextAuthProvider>
       </body>
     </html>
   );
