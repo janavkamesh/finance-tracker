@@ -293,34 +293,39 @@ export function TransactionManager({ initialTransactions, categories, activeMont
             {/* Left group: tabs + inline filters — grows to fill available space */}
             <div className="flex items-center flex-wrap gap-3 flex-1 min-w-0">
               {/* Type tabs — pure local state, zero network request */}
-              <div className="flex h-9 rounded-lg border border-gray-200 bg-white overflow-hidden text-sm font-medium shrink-0">
+              <div
+                className="flex h-9 rounded-lg overflow-hidden text-sm font-medium shrink-0"
+                style={{ border: '1px solid var(--border-default)', background: 'var(--bg-elevated)' }}
+              >
                 {TYPE_TABS.map(({ value, label }) => {
                   const count = value === "income" ? incomeCount : value === "expense" ? expenseCount : transactions.length;
+                  const isActive = typeTab === value;
+                  const activeStyle = isActive
+                    ? value === "income"
+                      ? { background: 'rgba(52,211,153,0.12)', color: 'var(--income-color)' }
+                      : value === "expense"
+                        ? { background: 'rgba(248,113,113,0.12)', color: 'var(--expense-color)' }
+                        : { background: 'var(--bg-active-nav)', color: 'var(--text-brand)' }
+                    : { color: 'var(--text-secondary)' };
                   return (
                     <button
                       key={value}
                       onClick={() => handleTypeTab(value)}
-                      className={cn(
-                        "px-3 transition-colors flex items-center gap-1.5",
-                        typeTab === value
-                          ? value === "income"
-                            ? "bg-green-100 text-green-700"
-                            : value === "expense"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-[#1E6B4E]/10 text-[#1E6B4E]"
-                          : "text-gray-500 hover:bg-gray-50"
-                      )}
+                      className="px-3 transition-colors flex items-center gap-1.5 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[rgba(255,255,255,0.03)]"
+                      style={activeStyle}
                     >
                       {label}
                       {value !== "all" && (
-                        <span className={cn(
-                          "text-[10px] font-bold rounded-full px-1.5 py-0.5 tabular-nums leading-none",
-                          typeTab === value
-                            ? value === "income"
-                              ? "bg-green-200/70 text-green-800"
-                              : "bg-red-200/70 text-red-800"
-                            : "bg-gray-100 text-gray-400"
-                        )}>
+                        <span
+                          className="text-[10px] font-bold rounded-full px-1.5 py-0.5 tabular-nums leading-none"
+                          style={
+                            isActive
+                              ? value === "income"
+                                ? { background: 'rgba(52,211,153,0.20)', color: 'var(--income-color)' }
+                                : { background: 'rgba(248,113,113,0.20)', color: 'var(--expense-color)' }
+                              : { background: 'var(--tag-bg)', color: 'var(--text-tertiary)' }
+                          }
+                        >
                           {count}
                         </span>
                       )}
@@ -349,12 +354,12 @@ export function TransactionManager({ initialTransactions, categories, activeMont
             <button
               type="button"
               onClick={() => setSelectionMode((s) => !s)}
-              className={cn(
-                "inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-sm font-semibold shadow-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E6B4E]/40",
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-sm font-semibold shadow-sm transition-all focus:outline-none"
+              style={
                 selectionMode
-                  ? "border border-[#1E6B4E]/50 bg-[#1E6B4E]/5 text-[#1E6B4E]"
-                  : "border border-[#1E6B4E]/25 bg-white text-[#1E6B4E] hover:border-[#1E6B4E]/50 hover:bg-[#1E6B4E]/5"
-              )}
+                  ? { background: 'var(--bg-active-nav)', color: 'var(--text-brand)', border: '1px solid var(--border-brand)' }
+                  : { background: 'var(--cta-secondary-bg)', color: 'var(--cta-secondary-text)', border: '1px solid var(--cta-secondary-border)' }
+              }
               aria-pressed={selectionMode}
             >
               {selectionMode ? <X className="size-3.5" /> : <CheckSquare className="size-3.5" />}
@@ -362,7 +367,8 @@ export function TransactionManager({ initialTransactions, categories, activeMont
             </button>
 
             <div
-              className="inline-flex h-9 items-center rounded-lg border border-gray-200 bg-white p-0.5 shadow-sm"
+              className="inline-flex h-9 items-center rounded-lg p-0.5 shadow-sm"
+              style={{ border: '1px solid var(--border-default)', background: 'var(--bg-elevated)' }}
               role="tablist"
               aria-label="Switch view"
             >
@@ -371,12 +377,12 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                 role="tab"
                 aria-selected={viewMode === "list"}
                 onClick={() => setViewMode("list")}
-                className={cn(
-                  "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors",
+                className="inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors"
+                style={
                   viewMode === "list"
-                    ? "bg-[#1E6B4E]/10 text-[#1E6B4E]"
-                    : "text-gray-500 hover:text-gray-700"
-                )}
+                    ? { background: 'var(--bg-active-nav)', color: 'var(--text-brand)' }
+                    : { color: 'var(--text-secondary)' }
+                }
               >
                 <List className="size-3.5" />
                 List
@@ -386,12 +392,12 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                 role="tab"
                 aria-selected={viewMode === "calendar"}
                 onClick={() => setViewMode("calendar")}
-                className={cn(
-                  "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors",
+                className="inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors"
+                style={
                   viewMode === "calendar"
-                    ? "bg-[#1E6B4E]/10 text-[#1E6B4E]"
-                    : "text-gray-500 hover:text-gray-700"
-                )}
+                    ? { background: 'var(--bg-active-nav)', color: 'var(--text-brand)' }
+                    : { color: 'var(--text-secondary)' }
+                }
               >
                 <CalendarDays className="size-3.5" />
                 Calendar
@@ -408,32 +414,35 @@ export function TransactionManager({ initialTransactions, categories, activeMont
 
       {/* ── Empty state ────────────────────────────────────────────── */}
       {displayedTransactions.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white py-16 text-center px-6">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 mb-4">
-            <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <div
+          className="flex flex-col items-center justify-center rounded-2xl border border-dashed py-16 text-center px-6"
+          style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-default)' }}
+        >
+          <div className="flex h-12 w-12 items-center justify-center rounded-full mb-4" style={{ background: 'var(--tag-bg)' }}>
+            <svg className="h-6 w-6" style={{ color: 'var(--text-tertiary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0c1.1.128 1.907 1.077 1.907 2.185z" />
             </svg>
           </div>
           {transactions.length > 0 ? (
             <>
-              <p className="text-sm font-medium text-gray-700">
+              <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                 No {typeTab} transactions in this period
               </p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
                 Switch to &quot;All&quot; to see all transactions, or add one now.
               </p>
             </>
           ) : (liveSearch || liveCategory) ? (
             <>
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                 {emptyMessage ?? "No transactions match your current filters."}
               </p>
-              <p className="text-sm text-gray-500 mt-1">Try adjusting or clearing the filters above.</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Try adjusting or clearing the filters above.</p>
             </>
           ) : (
             <>
-              <p className="text-sm font-medium text-gray-900">Nothing here yet</p>
-              <p className="text-sm text-gray-500 mt-1 mb-5">
+              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Nothing here yet</p>
+              <p className="text-sm mt-1 mb-5" style={{ color: 'var(--text-secondary)' }}>
                 Track your first income or expense to see it here.
               </p>
               <TransactionDialog categories={categories} activeMonth={activeMonth} />
@@ -444,9 +453,22 @@ export function TransactionManager({ initialTransactions, categories, activeMont
 
       {/* ── Transaction list ───────────────────────────────────────── */}
       {viewMode === "list" && displayedTransactions.length > 0 && (
-        <div className="w-full rounded-2xl border border-gray-100 bg-white overflow-hidden relative">
+        <div
+          className="w-full rounded-2xl overflow-hidden relative"
+          style={{
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border-default)',
+            boxShadow: 'var(--card-shadow)',
+          }}
+        >
           {/* List header — always shows the title; checkbox row only in selection mode */}
-          <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-gray-100 bg-white sticky top-0 z-10">
+          <div
+            className="flex items-center justify-between gap-3 px-5 py-3.5 sticky top-0 z-10"
+            style={{
+              background: 'var(--bg-elevated)',
+              borderBottom: '1px solid var(--border-default)',
+            }}
+          >
             <div className="flex items-center gap-3 min-w-0">
               {selectionMode && (
                 <input
@@ -457,8 +479,8 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                   aria-label="Select all transactions"
                 />
               )}
-              <h2 className="text-sm font-semibold text-gray-900">All Transactions</h2>
-              <span className="text-xs text-gray-400 tabular-nums">
+              <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>All Transactions</h2>
+              <span className="text-xs tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
                 {selectionMode && someSelected
                   ? `${selectedIds.size} of ${displayedTransactions.length} selected`
                   : `${displayedTransactions.length} ${displayedTransactions.length === 1 ? "item" : "items"}`}
@@ -466,12 +488,22 @@ export function TransactionManager({ initialTransactions, categories, activeMont
             </div>
           </div>
 
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y" style={{ borderColor: 'var(--border-default)' }}>
             {Object.entries(groupedTransactions).map(([dateLabel, txns]) => (
               <div key={dateLabel}>
                 {/* Date group sub-header */}
-                <div className="px-4 py-2 bg-gray-50/80 border-y border-gray-100 first:border-t-0 sticky top-10 z-10 backdrop-blur-sm">
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <div
+                  className="px-4 py-1.5 first:border-t-0 sticky top-10 z-10"
+                  style={{
+                    background: 'var(--bg-date-group)',
+                    borderTop: '1px solid var(--border-default)',
+                    borderBottom: '1px solid var(--border-default)',
+                  }}
+                >
+                  <h3
+                    className="text-xs font-semibold uppercase tracking-wider"
+                    style={{ color: 'var(--text-tertiary)' }}
+                  >
                     {dateLabel}
                   </h3>
                 </div>
@@ -494,8 +526,10 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                         key={txn.id}
                         className={cn(
                           "flex items-center gap-3 px-5 py-3 transition-colors group",
-                          isSelected   ? "bg-[#1E6B4E]/5"  : "hover:bg-gray-50/60",
-                          isOptimistic ? "opacity-70"       : ""
+                          isSelected
+                            ? "bg-[rgba(22,101,52,0.08)] dark:bg-[rgba(0,185,107,0.10)]"
+                            : "hover:bg-[rgba(22,101,52,0.05)] dark:hover:bg-[rgba(0,185,107,0.06)]",
+                          isOptimistic ? "opacity-70" : ""
                         )}
                       >
                         {/* Checkbox — only when in selection mode */}
@@ -518,10 +552,12 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                           {/* Col 1 — Context (50%): icon + description + date + category pill */}
                           <div className="flex items-center gap-3 min-w-0">
                             <div
-                              className={cn(
-                                "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-                                (!txn.category_user_id || !txn.category_color) && "bg-gray-100 text-gray-600"
-                              )}
+                              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                              style={
+                                !(txn.category_user_id && txn.category_color)
+                                  ? { background: 'var(--tag-bg)', color: 'var(--text-secondary)' }
+                                  : undefined
+                              }
                               style={
                                 txn.category_user_id && txn.category_color
                                   ? {
@@ -542,26 +578,26 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                             </div>
 
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">
+                              <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
                                 {txn.description || txn.category_name || "—"}
                                 {isOptimistic && (
                                   <span className="ml-1.5 text-[10px] text-gray-400 font-normal">saving…</span>
                                 )}
                               </p>
                               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                <span className="text-xs text-gray-400 shrink-0 tabular-nums">
+                                <span className="text-xs shrink-0 tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
                                   {new Date(txn.date + "T00:00:00").toLocaleDateString("en-IN", {
                                     day: "numeric", month: "short", year: "numeric",
                                   })}
                                 </span>
                                 {txn.category_name && (
                                   <span
-                                    className={cn(
-                                      "inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold leading-none",
-                                      txn.category_user_id && txn.category_color
-                                        ? ""
-                                        : "bg-gray-100 text-gray-500"
-                                    )}
+                                    className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold leading-none"
+                                    style={
+                                      !(txn.category_user_id && txn.category_color)
+                                        ? { background: 'var(--tag-bg)', color: 'var(--tag-text)' }
+                                        : undefined
+                                    }
                                     style={
                                       txn.category_user_id && txn.category_color
                                         ? {
@@ -581,20 +617,23 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                           {/* Col 2 — Method (15%): payment method pill, centered */}
                           <div className="flex justify-center">
                             {paymentLabel ? (
-                              <span className="inline-flex items-center rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600 leading-none">
+                              <span
+                                className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide leading-none"
+                                style={{ background: 'var(--tag-bg)', color: 'var(--tag-text)', border: '1px solid var(--tag-border)' }}
+                              >
                                 {paymentLabel}
                               </span>
                             ) : (
-                              <span className="text-xs text-gray-300 select-none">—</span>
+                              <span className="text-xs select-none" style={{ color: 'var(--text-tertiary)' }}>—</span>
                             )}
                           </div>
 
                           {/* Col 3 — Amount (20%): right-aligned, income green / expense red */}
                           <div className="text-right">
-                            <span className={cn(
-                              "text-sm font-semibold tabular-nums",
-                              isIncome ? "text-green-600" : "text-red-600"
-                            )}>
+                            <span
+                              className="text-sm font-semibold tabular-nums"
+                              style={{ color: isIncome ? 'var(--income-color)' : 'var(--expense-color)' }}
+                            >
                               {isIncome ? "+" : "-"}{formatINR(txn.amount)}
                             </span>
                           </div>

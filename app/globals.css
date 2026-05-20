@@ -48,6 +48,10 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ===================================================
+   FINTRACK INDIA — OBSIDIAN VAULT DESIGN SYSTEM
+   =================================================== */
+
 :root {
   /* ── Typography system ───────────────────────────────────────────── */
   --font-heading-family: var(--font-space-grotesk), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -83,73 +87,224 @@
   --tracking-wide:   +0.015em;
   --tracking-wider:  +0.06em;
 
-  /* Colors */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* === LIGHT MODE — Obsidian Vault Backgrounds === */
+  --bg-base:              #F2F6FA;
+  --bg-surface:           #FFFFFF;
+  --bg-elevated:          #FFFFFF;
+  --bg-raised:            #FFFFFF;
+  --bg-date-group:        #EEF2F7;
+  --bg-input:             #FFFFFF;
+  --bg-overlay:           rgba(0, 0, 0, 0.45);
+
+  /* Interactive Backgrounds */
+  --bg-hover-row:         rgba(22, 101, 52, 0.05);
+  --bg-hover-nav:         rgba(22, 101, 52, 0.07);
+  --bg-active-nav:        rgba(22, 101, 52, 0.09);
+  --bg-selected-row:      rgba(22, 101, 52, 0.08);
+
+  /* Borders */
+  --border-default:       rgba(0, 0, 0, 0.07);
+  --border-strong:        rgba(0, 0, 0, 0.12);
+  --border-brand:         rgba(22, 101, 52, 0.20);
+  --border-sidebar:       rgba(0, 0, 0, 0.06);
+
+  /* CTA / Buttons */
+  --cta-primary-bg:       #166534;
+  --cta-primary-hover:    #14532D;
+  --cta-primary-active:   #0F3D22;
+  --cta-primary-text:     #FFFFFF;
+  --cta-secondary-bg:     rgba(22, 101, 52, 0.08);
+  --cta-secondary-text:   #166534;
+  --cta-secondary-border: rgba(22, 101, 52, 0.25);
+  --cta-secondary-hover:  rgba(22, 101, 52, 0.14);
+  --cta-cancel-bg:        transparent;
+  --cta-cancel-text:      #64748B;
+  --cta-cancel-hover-bg:  rgba(0, 0, 0, 0.05);
+
+  /* Typography */
+  --text-primary:         #0F172A;
+  --text-secondary:       #475569;
+  --text-tertiary:        #94A3B8;
+  --text-inverse:         #FFFFFF;
+  --text-brand:           #166534;
+  --text-muted-nav:       #64748B;
+  --text-active-nav:      #166534;
+
+  /* Semantic (Income / Expense / Net) */
+  --income-color:         #15803D;
+  --expense-color:        #DC2626;
+  --savings-color:        #1D4ED8;
+  --savings-rate-color:   #15803D;
+
+  /* Progress Bars */
+  --progress-track:       rgba(0, 0, 0, 0.08);
+  --progress-fill:        #166534;
+
+  /* Tags / Chips */
+  --tag-bg:               #F1F5F9;
+  --tag-text:             #475569;
+  --tag-border:           rgba(0, 0, 0, 0.08);
+
+  /* Cards */
+  --card-shadow:          0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --card-shadow-hover:    0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05);
+
+  /* Skeleton */
+  --skeleton-base:        #E2E8F0;
+  --skeleton-shine:       #F1F5F9;
+
+  /* Focus */
+  --focus-ring:           rgba(22, 101, 52, 0.35);
+
+  /* Sidebar */
+  --sidebar-width:        240px;
+  --sidebar-bg:           var(--bg-surface);
+  --sidebar-border-rule:  1px solid var(--border-sidebar);
+
+  /* === shadcn/ui variables mapped to Obsidian Vault === */
+  --background:           #F2F6FA;
+  --foreground:           #0F172A;
+  --card:                 #FFFFFF;
+  --card-foreground:      #0F172A;
+  --popover:              #FFFFFF;
+  --popover-foreground:   #0F172A;
+  --primary:              #166534;
+  --primary-foreground:   #FFFFFF;
+  --secondary:            #F1F5F9;
+  --secondary-foreground: #0F172A;
+  --muted:                #F1F5F9;
+  --muted-foreground:     #475569;
+  --accent:               #F1F5F9;
+  --accent-foreground:    #0F172A;
+  --destructive:          #DC2626;
+  --border:               rgba(0, 0, 0, 0.07);
+  --input:                rgba(0, 0, 0, 0.07);
+  --ring:                 rgba(22, 101, 52, 0.35);
+  --chart-1:              #15803D;
+  --chart-2:              #DC2626;
+  --chart-3:              #1D4ED8;
+  --chart-4:              #8B5CF6;
+  --chart-5:              #F59E0B;
+  --radius:               0.625rem;
+  --sidebar:              #FFFFFF;
+  --sidebar-foreground:   #0F172A;
+  --sidebar-primary:      #166534;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent:       rgba(22, 101, 52, 0.09);
+  --sidebar-accent-foreground: #166534;
+  --sidebar-border:       rgba(0, 0, 0, 0.06);
+  --sidebar-ring:         rgba(22, 101, 52, 0.35);
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+/* === DARK MODE OVERRIDES — Obsidian Vault === */
+.dark,
+[data-theme="dark"],
+[data-mode="dark"] {
+  /* Backgrounds */
+  --bg-base:              #0B0E13;
+  --bg-surface:           #111620;
+  --bg-elevated:          #111620;
+  --bg-raised:            #1A2030;
+  --bg-date-group:        #111620;
+  --bg-input:             #0F1520;
+  --bg-overlay:           rgba(0, 0, 0, 0.65);
+
+  /* Interactive Backgrounds */
+  --bg-hover-row:         rgba(0, 185, 107, 0.06);
+  --bg-hover-nav:         rgba(0, 185, 107, 0.08);
+  --bg-active-nav:        rgba(0, 185, 107, 0.12);
+  --bg-selected-row:      rgba(0, 185, 107, 0.10);
+
+  /* Borders */
+  --border-default:       rgba(255, 255, 255, 0.07);
+  --border-strong:        rgba(255, 255, 255, 0.12);
+  --border-brand:         rgba(0, 185, 107, 0.25);
+  --border-sidebar:       rgba(255, 255, 255, 0.06);
+
+  /* CTA / Buttons */
+  --cta-primary-bg:       #00B96B;
+  --cta-primary-hover:    #00D47A;
+  --cta-primary-active:   #009E5A;
+  --cta-primary-text:     #FFFFFF;
+  --cta-secondary-bg:     rgba(0, 185, 107, 0.10);
+  --cta-secondary-text:   #00B96B;
+  --cta-secondary-border: rgba(0, 185, 107, 0.30);
+  --cta-secondary-hover:  rgba(0, 185, 107, 0.18);
+  --cta-cancel-bg:        transparent;
+  --cta-cancel-text:      #94A3B8;
+  --cta-cancel-hover-bg:  rgba(255, 255, 255, 0.06);
+
+  /* Typography */
+  --text-primary:         #F1F5F9;
+  --text-secondary:       #94A3B8;
+  --text-tertiary:        #64748B;
+  --text-inverse:         #0B0E13;
+  --text-brand:           #00B96B;
+  --text-muted-nav:       #64748B;
+  --text-active-nav:      #F1F5F9;
+
+  /* Semantic (Income / Expense / Net) */
+  --income-color:         #34D399;
+  --expense-color:        #F87171;
+  --savings-color:        #60A5FA;
+  --savings-rate-color:   #34D399;
+
+  /* Progress Bars */
+  --progress-track:       rgba(255, 255, 255, 0.08);
+  --progress-fill:        #00B96B;
+
+  /* Tags / Chips */
+  --tag-bg:               rgba(255, 255, 255, 0.06);
+  --tag-text:             #94A3B8;
+  --tag-border:           rgba(255, 255, 255, 0.10);
+
+  /* Cards */
+  --card-shadow:          none;
+  --card-shadow-hover:    none;
+
+  /* Skeleton */
+  --skeleton-base:        #111620;
+  --skeleton-shine:       #1A2030;
+
+  /* Focus */
+  --focus-ring:           rgba(0, 185, 107, 0.40);
+
+  /* Sidebar */
+  --sidebar-bg:           var(--bg-surface);
+  --sidebar-border-rule:  1px solid var(--border-sidebar);
+
+  /* === shadcn/ui dark variables mapped to Obsidian Vault === */
+  --background:           #0B0E13;
+  --foreground:           #F1F5F9;
+  --card:                 #111620;
+  --card-foreground:      #F1F5F9;
+  --popover:              #1A2030;
+  --popover-foreground:   #F1F5F9;
+  --primary:              #00B96B;
+  --primary-foreground:   #FFFFFF;
+  --secondary:            #111620;
+  --secondary-foreground: #F1F5F9;
+  --muted:                #111620;
+  --muted-foreground:     #94A3B8;
+  --accent:               rgba(0, 185, 107, 0.12);
+  --accent-foreground:    #F1F5F9;
+  --destructive:          #F87171;
+  --border:               rgba(255, 255, 255, 0.07);
+  --input:                rgba(255, 255, 255, 0.07);
+  --ring:                 rgba(0, 185, 107, 0.40);
+  --chart-1:              #34D399;
+  --chart-2:              #F87171;
+  --chart-3:              #60A5FA;
+  --chart-4:              #A78BFA;
+  --chart-5:              #FBBF24;
+  --sidebar:              #111620;
+  --sidebar-foreground:   #F1F5F9;
+  --sidebar-primary:      #00B96B;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent:       rgba(0, 185, 107, 0.12);
+  --sidebar-accent-foreground: #F1F5F9;
+  --sidebar-border:       rgba(255, 255, 255, 0.06);
+  --sidebar-ring:         rgba(0, 185, 107, 0.40);
 }
 
 @layer base {
@@ -175,68 +330,86 @@
   }
 }
 
-/* ── Global dark mode overrides for hardcoded Tailwind colour utilities ──── */
-/* These complement the CSS-variable layer and catch static classes that      */
-/* can't be updated at the component level (e.g. third-party, generated).     */
+/* ── Dark mode overrides for hardcoded Tailwind colour utilities ──────────────
+   Catch static classes that can't be updated at the component level.
+   Brand-tinted hovers replace all flat-gray patterns (Fix 1 from spec).       */
 
-.dark .bg-white { background-color: rgb(17 24 39); }           /* gray-900 */
-.dark .bg-gray-50 { background-color: rgb(17 24 39); }
-.dark .bg-gray-50\/60 { background-color: rgb(17 24 39 / 0.6); }
-.dark .bg-white\/95 { background-color: rgb(17 24 39 / 0.95); }
-.dark .bg-gray-100 { background-color: rgb(31 41 55); }        /* gray-800 */
+/* Background surfaces */
+.dark .bg-white              { background-color: #111620; }
+.dark .bg-white\/95          { background-color: rgba(17, 22, 32, 0.95); }
+.dark .bg-gray-950           { background-color: #111620; }
+.dark .bg-gray-50            { background-color: #111620; }
+.dark .bg-gray-50\/80        { background-color: rgba(17, 22, 32, 0.9); }
+.dark .bg-gray-50\/60        { background-color: rgba(17, 22, 32, 0.8); }
+.dark .bg-gray-100           { background-color: #1A2030; }
+.dark .bg-gray-200           { background-color: #232B3E; }
 
-.dark .text-gray-900 { color: rgb(243 244 246); }              /* gray-100 */
-.dark .text-gray-800 { color: rgb(229 231 235); }              /* gray-200 */
-.dark .text-gray-700 { color: rgb(209 213 219); }              /* gray-300 */
-.dark .text-gray-600 { color: rgb(156 163 175); }              /* gray-400 */
-.dark .text-gray-500 { color: rgb(107 114 128); }              /* gray-500 */
-.dark .text-gray-400 { color: rgb(75 85 99); }                 /* gray-600 */
+/* Text colours */
+.dark .text-gray-900         { color: #F1F5F9; }
+.dark .text-gray-800         { color: #E2E8F0; }
+.dark .text-gray-700         { color: #CBD5E1; }
+.dark .text-gray-600         { color: #94A3B8; }
+.dark .text-gray-500         { color: #64748B; }
+.dark .text-gray-400         { color: #475569; }
+.dark .text-gray-300         { color: #334155; }
 
-.dark .border-gray-100 { border-color: rgb(31 41 55); }        /* gray-800 */
-.dark .border-gray-200 { border-color: rgb(55 65 81); }        /* gray-700 */
-.dark .border-gray-100\/60 { border-color: rgb(31 41 55 / 0.6); }
+/* Income / expense semantic colours — always remain vivid */
+.dark .text-green-600        { color: #34D399; }
+.dark .text-red-600          { color: #F87171; }
 
-.dark .divide-gray-50 > * + * { border-color: rgb(31 41 55); }
-.dark .divide-gray-100 > * + * { border-color: rgb(31 41 55); }
+/* Borders */
+.dark .border-gray-100       { border-color: rgba(255, 255, 255, 0.07); }
+.dark .border-gray-200       { border-color: rgba(255, 255, 255, 0.10); }
+.dark .border-gray-800       { border-color: rgba(255, 255, 255, 0.06); }
+.dark .border-gray-100\/60   { border-color: rgba(255, 255, 255, 0.05); }
 
-.dark .hover\:bg-gray-50:hover { background-color: rgb(31 41 55); }
-.dark .hover\:bg-gray-100:hover { background-color: rgb(55 65 81); }
-.dark .hover\:bg-gray-50\/60:hover { background-color: rgb(31 41 55 / 0.6); }
-.dark .hover\:text-gray-600:hover { color: rgb(156 163 175); }
-.dark .hover\:text-gray-900:hover { color: rgb(243 244 246); }
+/* Dividers */
+.dark .divide-gray-50 > * + *  { border-color: rgba(255, 255, 255, 0.05); }
+.dark .divide-gray-100 > * + * { border-color: rgba(255, 255, 255, 0.07); }
+
+/* ── Brand-tinted hover states — Fix 1 from spec ──────────────────────────── */
+.dark .hover\:bg-gray-50:hover      { background-color: rgba(0, 185, 107, 0.06); }
+.dark .hover\:bg-gray-50\/60:hover  { background-color: rgba(0, 185, 107, 0.06); }
+.dark .hover\:bg-gray-50\/70:hover  { background-color: rgba(0, 185, 107, 0.06); }
+.dark .hover\:bg-gray-100:hover     { background-color: rgba(0, 185, 107, 0.08); }
+.dark .hover\:bg-gray-50\/60:hover  { background-color: rgba(0, 185, 107, 0.06); }
+.dark .hover\:text-gray-600:hover   { color: #94A3B8; }
+.dark .hover\:text-gray-900:hover   { color: #F1F5F9; }
 
 /* Backdrop blur header */
 .dark .backdrop-blur-sm { --tw-backdrop-blur: blur(4px); }
 
-/* Input fields */
+/* ── Input fields — Fix 6 from spec ───────────────────────────────────────── */
 .dark input:not([class*="bg-"]),
 .dark textarea:not([class*="bg-"]) {
-  background-color: rgb(31 41 55);
-  color: rgb(243 244 246);
-  border-color: rgb(55 65 81);
+  background-color: #0F1520;
+  color: #F1F5F9;
+  border-color: rgba(255, 255, 255, 0.07);
 }
-.dark .bg-gray-50 input,
-.dark input.bg-gray-50 {
-  background-color: rgb(31 41 55);
-  color: rgb(243 244 246);
+.dark input.bg-gray-50,
+.dark .bg-gray-50 input {
+  background-color: #0F1520;
+  color: #F1F5F9;
+}
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748B;
 }
 
-/* Chart tooltip & popover backgrounds */
+/* ── Chart tooltip & popover backgrounds ──────────────────────────────────── */
 .dark .recharts-tooltip-wrapper .recharts-default-tooltip {
-  background-color: rgb(31 41 55) !important;
-  border-color: rgb(55 65 81) !important;
-  color: rgb(243 244 246) !important;
+  background-color: #1A2030 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #F1F5F9 !important;
 }
 
-/* Dialog / modal overlay content */
-.dark [data-radix-popper-content-wrapper] {
-  --popover-bg: rgb(31 41 55);
+/* ── Date group separator rows — Fix 3 from spec ─────────────────────────── */
+.dark .bg-gray-50\/80 {
+  background-color: #111620;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
    FINTRACK TYPOGRAPHY SYSTEM — Space Grotesk (headings) + Inter (body)
-   These rules are intentionally outside @layer so they override Tailwind
-   utilities for font-family and font-feature-settings.
    ═══════════════════════════════════════════════════════════════════════ */
 
 /* ── Heading font family ─────────────────────────────────────────────── */
@@ -261,9 +434,7 @@ button,
   font-family: var(--font-body-family);
 }
 
-/* ── Global tabular numbers — every financial figure must align ───────
-   Targets any element carrying a monetary, percentage, or count value.
-   Complements the Tailwind `tabular-nums` utility already in use.       */
+/* ── Global tabular numbers ───────────────────────────────────────────── */
 .tabular-nums,
 [class*="amount"],
 [class*="balance"],

@@ -112,7 +112,8 @@ export function AnimatedTransactionList({ transactions, categories }: Props) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-1 text-center">
         <svg
-          className="w-8 h-8 text-gray-200 mb-1"
+          className="w-8 h-8 mb-1"
+          style={{ color: 'var(--text-tertiary)' }}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -124,8 +125,8 @@ export function AnimatedTransactionList({ transactions, categories }: Props) {
             d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0c1.1.128 1.907 1.077 1.907 2.185z"
           />
         </svg>
-        <p className="text-sm font-medium text-gray-400">Nothing here yet</p>
-        <p className="text-xs text-gray-300">
+        <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Nothing here yet</p>
+        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
           Your recent transactions will appear here
         </p>
       </div>
@@ -171,11 +172,11 @@ export function AnimatedTransactionList({ transactions, categories }: Props) {
               {/* ── Row content ──────────────────────────────────────────────── */}
               <div
                 className={cn(
-                  "group flex items-stretch cursor-default",
-                  "transition-colors duration-150 hover:bg-gray-50/70",
-                  // Divider between rows (skip on last item)
-                  idx < transactions.length - 1 && "border-b border-gray-50"
+                  "group flex items-stretch cursor-default transition-colors duration-150",
+                  "hover:bg-[rgba(22,101,52,0.05)] dark:hover:bg-[rgba(0,185,107,0.06)]",
+                  idx < transactions.length - 1 && "border-b"
                 )}
+                style={idx < transactions.length - 1 ? { borderBottomColor: 'var(--border-default)' } : {}}
               >
                 {/* Left colour stripe */}
                 <div
@@ -188,7 +189,7 @@ export function AnimatedTransactionList({ transactions, categories }: Props) {
                 <div className="flex flex-1 items-center gap-3 px-5 py-3.5">
                   {/* ── Main content ───────────────────────────────────────── */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">
+                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
                       {txn.description || txn.category_name || "—"}
                     </p>
 
@@ -201,18 +202,11 @@ export function AnimatedTransactionList({ transactions, categories }: Props) {
                         });
                         return (
                           <span
-                            className={cn(
-                              "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium",
-                              (!txn.category_user_id || !txn.category_color) &&
-                                "bg-gray-100 text-gray-700"
-                            )}
+                            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium"
                             style={
                               txn.category_user_id && txn.category_color
-                                ? {
-                                    backgroundColor: `${txn.category_color}18`,
-                                    color: txn.category_color,
-                                  }
-                                : undefined
+                                ? { backgroundColor: `${txn.category_color}18`, color: txn.category_color }
+                                : { background: 'var(--tag-bg)', color: 'var(--tag-text)' }
                             }
                           >
                             <CatIcon className="size-2.5 shrink-0" />
@@ -221,7 +215,7 @@ export function AnimatedTransactionList({ transactions, categories }: Props) {
                         );
                       })()}
 
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
                         {new Date(txn.date + "T00:00:00").toLocaleDateString(
                           "en-IN",
                           { day: "numeric", month: "short" }
@@ -230,7 +224,7 @@ export function AnimatedTransactionList({ transactions, categories }: Props) {
 
                       {/* Payment method badge — only shown when set */}
                       {pm && (
-                        <span className="inline-flex items-center gap-1 rounded-md border border-gray-100 bg-gray-50 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">
+                        <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium" style={{ background: 'var(--tag-bg)', color: 'var(--tag-text)', border: '1px solid var(--tag-border)' }}>
                           <pm.Icon className="size-2.5 shrink-0" />
                           {pm.label}
                         </span>
@@ -240,10 +234,8 @@ export function AnimatedTransactionList({ transactions, categories }: Props) {
 
                   {/* ── Amount ─────────────────────────────────────────────── */}
                   <span
-                    className={cn(
-                      "text-base font-bold tabular-nums shrink-0",
-                      isIncome ? "text-green-600" : "text-gray-800"
-                    )}
+                    className="text-base font-bold tabular-nums shrink-0"
+                    style={{ color: isIncome ? 'var(--income-color)' : 'var(--expense-color)' }}
                   >
                     {isIncome ? "+" : "−"}{formatINR(txn.amount)}
                   </span>
@@ -257,7 +249,8 @@ export function AnimatedTransactionList({ transactions, categories }: Props) {
                     <button
                       type="button"
                       onClick={() => handleDelete(txn.id)}
-                      className="flex items-center justify-center rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                      className="flex items-center justify-center rounded-lg p-2 transition-colors hover:bg-[rgba(248,113,113,0.08)] hover:text-[#F87171]"
+                      style={{ color: 'var(--text-tertiary)' }}
                       aria-label="Delete transaction"
                     >
                       <Trash2 className="size-4" />

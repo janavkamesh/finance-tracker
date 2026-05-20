@@ -117,13 +117,13 @@ function CalcPanel({ onResult }: { onResult: (v: string) => void }) {
   ];
 
   return (
-    <div className="mt-2 rounded-xl border border-gray-200 bg-gray-50 p-3 shadow-sm">
+    <div className="mt-2 rounded-xl p-3 shadow-sm" style={{ border: '1px solid var(--border-default)', background: 'var(--bg-elevated)' }}>
       {/* Display */}
-      <div className="mb-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-right">
-        <p className="text-xs text-gray-400 h-4 tabular-nums truncate">
+      <div className="mb-2 rounded-lg px-3 py-2 text-right" style={{ border: '1px solid var(--border-default)', background: 'var(--bg-input)' }}>
+        <p className="text-xs h-4 tabular-nums truncate" style={{ color: 'var(--text-tertiary)' }}>
           {expr || ""}
         </p>
-        <p className="text-lg font-bold text-gray-900 tabular-nums">
+        <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>
           {preview !== null && expr !== String(preview) ? `= ${preview}` : display}
         </p>
       </div>
@@ -137,6 +137,13 @@ function CalcPanel({ onResult }: { onResult: (v: string) => void }) {
             const isEq = key === "=";
             const isClear = key === "C";
             const isDel = key === "←";
+            const calcStyle = isEq
+              ? { background: 'var(--cta-primary-bg)', color: 'var(--cta-primary-text)' }
+              : isOp
+                ? { background: 'var(--cta-secondary-bg)', color: 'var(--cta-secondary-text)' }
+                : isClear
+                  ? {}
+                  : { background: 'var(--bg-raised)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' };
             return (
               <button
                 key={`${ri}-${ci}`}
@@ -144,16 +151,11 @@ function CalcPanel({ onResult }: { onResult: (v: string) => void }) {
                 onClick={() => press(key)}
                 className={cn(
                   "flex h-10 w-full items-center justify-center rounded-lg text-sm font-semibold transition-colors select-none",
-                  isEq
-                    ? "bg-[#1E6B4E] text-white hover:bg-[#185c43]"
-                    : isOp
-                      ? "bg-[#1E6B4E]/10 text-[#1E6B4E] hover:bg-[#1E6B4E]/20"
-                      : isClear
-                        ? "bg-red-100 text-red-600 hover:bg-red-200"
-                        : isDel
-                          ? "bg-gray-200 text-gray-600 hover:bg-gray-300"
-                          : "bg-white text-gray-800 border border-gray-200 hover:bg-gray-100",
+                  isClear
+                    ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50"
+                    : "hover:opacity-90",
                 )}
+                style={isClear ? {} : calcStyle}
               >
                 {isDel ? <Delete className="size-4" /> : key}
               </button>
@@ -290,14 +292,15 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
   }
 
   const inputClass =
-    "w-full rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1E6B4E]/30 focus:border-[#1E6B4E] transition-colors";
+    "w-full rounded-lg px-3.5 py-2.5 text-sm focus:outline-none transition-colors [background:var(--bg-input)] [color:var(--text-primary)] [border:1px_solid_var(--border-default)] placeholder:[color:var(--text-tertiary)] hover:[border-color:var(--border-strong)] focus:[border-color:var(--text-brand)] focus:[box-shadow:0_0_0_3px_var(--focus-ring)]";
 
   return (
     <>
       {isEdit ? (
         <button
           onClick={() => setOpen(true)}
-          className="flex items-center justify-center rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+          className="flex items-center justify-center rounded-lg p-2 transition-colors hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[rgba(255,255,255,0.06)]"
+          style={{ color: 'var(--text-tertiary)' }}
           aria-label="Edit transaction"
         >
           <Pencil className="size-4" />
@@ -305,7 +308,14 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
       ) : triggerVariant === "secondary" ? (
         <button
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-200"
+          className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors focus:outline-none"
+          style={{
+            background: 'var(--cta-secondary-bg)',
+            color: 'var(--cta-secondary-text)',
+            border: '1px solid var(--cta-secondary-border)',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--cta-secondary-hover)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'var(--cta-secondary-bg)')}
         >
           <Plus className="size-4" />
           Add Transaction
@@ -313,7 +323,10 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
       ) : (
         <button
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#1E6B4E] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#185c43] focus:outline-none focus:ring-2 focus:ring-[#1E6B4E]/50"
+          className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors focus:outline-none active:scale-[0.98]"
+          style={{ background: 'var(--cta-primary-bg)', color: 'var(--cta-primary-text)' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--cta-primary-hover)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'var(--cta-primary-bg)')}
         >
           <Plus className="size-4" />
           Add Transaction
@@ -340,14 +353,14 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
                       key={t}
                       type="button"
                       onClick={() => field.onChange(t)}
-                      className={cn(
-                        "rounded-lg py-2 text-sm font-medium capitalize transition-colors",
+                      className="rounded-lg py-2 text-sm font-medium capitalize transition-colors"
+                      style={
                         field.value === t
                           ? t === "expense"
-                            ? "bg-red-100 text-red-700 ring-1 ring-red-200"
-                            : "bg-green-100 text-green-700 ring-1 ring-green-200"
-                          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                      )}
+                            ? { background: 'rgba(248,113,113,0.12)', color: 'var(--expense-color)', outline: '1px solid rgba(248,113,113,0.30)' }
+                            : { background: 'rgba(52,211,153,0.12)', color: 'var(--income-color)', outline: '1px solid rgba(52,211,153,0.30)' }
+                          : { background: 'var(--tag-bg)', color: 'var(--text-secondary)' }
+                      }
                     >
                       {t}
                     </button>
@@ -358,7 +371,7 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
 
             {/* Amount + Calculator */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                 Amount (₹)
               </label>
               <div className="relative">
@@ -378,8 +391,8 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
                   className={cn(
                     "absolute right-2.5 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-md transition-colors",
                     showCalc
-                      ? "bg-[#1E6B4E] text-white"
-                      : "text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                      ? "bg-[var(--cta-primary-bg)] text-white"
+                      : "hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[rgba(255,255,255,0.08)]"
                   )}
                   aria-label="Toggle calculator"
                 >
@@ -401,7 +414,7 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
 
             {/* Category */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                 Category
               </label>
               <Controller
@@ -424,9 +437,9 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                 Description{" "}
-                <span className="text-gray-400 font-normal">(optional)</span>
+                <span className="font-normal" style={{ color: 'var(--text-tertiary)' }}>(optional)</span>
               </label>
               <input
                 type="text"
@@ -441,9 +454,9 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
 
             {/* Payment Method */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                 Payment method{" "}
-                <span className="text-gray-400 font-normal">(optional)</span>
+                <span className="font-normal" style={{ color: 'var(--text-tertiary)' }}>(optional)</span>
               </label>
               <div className="flex flex-wrap gap-2">
                 {PAYMENT_METHODS.map(({ value, label, icon: Icon }) => (
@@ -453,12 +466,12 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
                     onClick={() =>
                       setPaymentMethod((prev) => (prev === value ? "" : value))
                     }
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                    style={
                       paymentMethod === value
-                        ? "border-[#1E6B4E] bg-[#1E6B4E]/10 text-[#1E6B4E]"
-                        : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-                    )}
+                        ? { background: 'var(--cta-primary-bg)', color: 'var(--cta-primary-text)', border: 'none' }
+                        : { background: 'var(--tag-bg)', color: 'var(--tag-text)', border: '1px solid var(--tag-border)' }
+                    }
                   >
                     <Icon className="size-3.5 shrink-0" />
                     {label}
@@ -470,11 +483,12 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
             {/* Date */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-medium text-gray-700">Date</label>
+                <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Date</label>
                 <button
                   type="button"
                   onClick={() => setValue("date", todayLocal(), { shouldValidate: true })}
-                  className="text-xs font-medium text-[#1E6B4E] hover:text-[#185c43] hover:underline transition-colors"
+                  className="text-xs font-medium hover:underline transition-colors"
+                  style={{ color: 'var(--text-brand)' }}
                 >
                   Today
                 </button>
@@ -488,7 +502,7 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
                     onChange={(date) => {
                       field.onChange(date ? format(date, "yyyy-MM-dd") : "");
                     }}
-                    className={cn(inputClass, "py-2 text-left bg-white")}
+                    className={cn(inputClass, "py-2 text-left")}
                   />
                 )}
               />
@@ -502,13 +516,17 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                className="rounded-lg px-4 py-2 text-sm font-medium transition-colors hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[rgba(255,255,255,0.06)]"
+                style={{ color: 'var(--cta-cancel-text)', border: '1px solid var(--border-default)' }}
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="rounded-lg bg-[#1E6B4E] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#185c43]"
+                className="rounded-lg px-4 py-2 text-sm font-semibold transition-colors active:scale-[0.98]"
+                style={{ background: 'var(--cta-primary-bg)', color: 'var(--cta-primary-text)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--cta-primary-hover)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'var(--cta-primary-bg)')}
               >
                 {isEdit ? "Save changes" : "Add transaction"}
               </button>

@@ -265,22 +265,19 @@ export default async function DashboardPage() {
     {
       label: "Income",
       value: formatINR(monthIncome),
-      color: "text-green-600",
-      dot: "bg-green-500",
+      colorVar: "var(--income-color)",
       delta: delta(monthIncome, prevIncome),
     },
     {
       label: "Expenses",
       value: formatINR(monthExpense),
-      color: "text-red-600",
-      dot: "bg-red-500",
+      colorVar: "var(--expense-color)",
       delta: delta(monthExpense, prevExpense),
     },
     {
       label: "Net savings",
-      value: (monthNet >= 0 ? "+" : "") + formatINR(monthNet),
-      color: monthNet >= 0 ? "text-green-600" : "text-red-600",
-      dot: monthNet >= 0 ? "bg-green-500" : "bg-red-500",
+      value: (monthNet >= 0 ? "+" : "−") + formatINR(Math.abs(monthNet)),
+      colorVar: monthNet >= 0 ? "var(--income-color)" : "var(--expense-color)",
       delta: delta(monthNet, prevNet),
     },
   ];
@@ -291,7 +288,7 @@ export default async function DashboardPage() {
     <>
       {/* Sticky action bar — h-16 matches the sidebar's logo section so the
           bottom borders line up flush across the sidebar/main seam. */}
-      <div className="sticky top-14 md:top-0 z-10 bg-white border-b border-gray-100 h-[88px] px-6 md:px-8 flex items-center justify-between gap-4">
+      <div className="sticky top-14 md:top-0 z-10 h-[88px] px-6 md:px-8 flex items-center justify-between gap-4" style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-default)' }}>
         <div className="flex-1 min-w-0">
           <DynamicGreeting firstName={firstName} />
         </div>
@@ -307,18 +304,19 @@ export default async function DashboardPage() {
         {summaryCards.map((card) => (
           <div
             key={card.label}
-            className="rounded-xl border border-gray-100 bg-white px-4 py-3"
+            className="rounded-xl px-4 py-3"
+            style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}
           >
             <div className="flex items-center gap-2 mb-1.5">
-              <span className={`h-2 w-2 rounded-full ${card.dot}`} />
-              <span className="text-xs text-gray-500">{card.label}</span>
+              <span className="h-2 w-2 rounded-full" style={{ background: card.colorVar }} />
+              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{card.label}</span>
             </div>
             <div className="flex items-baseline gap-2">
-              <p className={`text-lg font-bold tabular-nums ${card.color}`}>
+              <p className="text-lg font-bold tabular-nums" style={{ color: card.colorVar }}>
                 {card.value}
               </p>
               {card.delta && (
-                <span className="text-[11px] font-medium tabular-nums text-gray-400 truncate">
+                <span className="text-[11px] font-medium tabular-nums truncate" style={{ color: 'var(--text-tertiary)' }}>
                   {card.delta.up ? "↑" : "↓"} {card.delta.label}
                 </span>
               )}
@@ -332,10 +330,10 @@ export default async function DashboardPage() {
 
       {/* Budget progress — always visible */}
       {!profile?.monthly_budget ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-white px-5 py-4 mb-4 flex items-center justify-between">
+        <div className="rounded-xl border border-dashed px-5 py-4 mb-4 flex items-center justify-between" style={{ borderColor: 'var(--border-default)', background: 'var(--bg-elevated)' }}>
           <div>
-            <p className="text-sm font-semibold text-gray-900">Monthly budget</p>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Monthly budget</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
               Set a limit to track how much you&apos;re spending
             </p>
           </div>
@@ -387,14 +385,15 @@ export default async function DashboardPage() {
       </div>
 
       {/* Recent transactions */}
-      <div className="rounded-2xl border border-gray-100 bg-white">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
-          <h2 className="text-sm font-semibold text-gray-900">
+      <div className="rounded-2xl" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}>
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border-default)' }}>
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
             Recent transactions
           </h2>
           <Link
             href="/transactions"
-            className="flex items-center gap-1 text-xs font-medium text-[#1E6B4E] hover:underline"
+            className="flex items-center gap-1 text-xs font-medium hover:underline"
+            style={{ color: 'var(--text-brand)' }}
           >
             View all <ArrowRight className="size-3" />
           </Link>
