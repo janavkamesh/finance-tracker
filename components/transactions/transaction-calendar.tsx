@@ -33,12 +33,20 @@ function pad(n: number) {
   return String(n).padStart(2, "0");
 }
 
-export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
+export function TransactionCalendar({
+  inline = false,
+  initialDayData,
+}: {
+  inline?: boolean;
+  initialDayData?: Record<string, DayData>;
+}) {
   const now = new Date();
   const [open, setOpen] = useState(false);
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
-  const [dayData, setDayData] = useState<Record<string, DayData>>({});
+  const [dayData, setDayData] = useState<Record<string, DayData>>(
+    initialDayData ?? {}
+  );
   const [loading, setLoading] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [dayDetail, setDayDetail] = useState<DayTransaction[]>([]);
@@ -48,6 +56,19 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
   const cacheRef = useRef<Map<string, Record<string, DayData>>>(new Map());
   // Client-side cache: date key → day transactions (populated on hover or click)
   const dayDetailCacheRef = useRef<Map<string, DayTransaction[]>>(new Map());
+
+  // ── Seed cache from pre-computed props — eliminates the network fetch on
+  //    initial mount when the parent already has this month's transactions loaded.
+  useEffect(() => {
+    if (!initialDayData) return;
+    const key = `${now.getFullYear()}-${now.getMonth() + 1}`;
+    cacheRef.current.set(key, initialDayData);
+    // Immediately apply if currently viewing the current month
+    if (year === now.getFullYear() && month === now.getMonth() + 1) {
+      setDayData(initialDayData);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialDayData]);
 
   const fetchMonth = useCallback(async (y: number, m: number, updateUI = true) => {
     const key = `${y}-${m}`;
@@ -256,7 +277,14 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
 
     if (inline) {
       return (
-        <div className="max-w-2xl mx-auto rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div
+          className="w-full rounded-2xl overflow-hidden"
+          style={{
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border-default)',
+            boxShadow: 'var(--card-shadow)',
+          }}
+        >
           <div className="p-5">{dayDetailContent}</div>
         </div>
       );
@@ -299,13 +327,15 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
     <div className="flex items-center gap-1">
       <button
         onClick={prevMonth}
-        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+        className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[rgba(255,255,255,0.06)]"
+        style={{ color: 'var(--text-secondary)' }}
       >
         <ChevronLeft className="size-4" />
       </button>
       <button
         onClick={() => { setYear(now.getFullYear()); setMonth(now.getMonth() + 1); }}
-        className="min-w-[120px] text-center text-sm font-semibold text-gray-800 hover:text-[#1E6B4E] transition-colors px-2 flex items-center justify-center gap-1.5"
+        className="min-w-[120px] text-center text-sm font-semibold transition-colors px-2 flex items-center justify-center gap-1.5"
+        style={{ color: 'var(--text-primary)' }}
       >
         {MONTHS[month - 1]} {year}
         {loading && (
@@ -315,7 +345,8 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
       <button
         onClick={nextMonth}
         disabled={isAtCurrentMonth}
-        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[rgba(255,255,255,0.06)] disabled:opacity-30 disabled:cursor-not-allowed"
+        style={{ color: 'var(--text-secondary)' }}
       >
         <ChevronRight className="size-4" />
       </button>
@@ -325,8 +356,11 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
   const monthViewContent = (
     <div className={cn(inline ? "p-5" : "px-5 pb-5 pt-2")}>
       {inline && (
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-base font-semibold text-gray-900">Spending Calendar</h3>
+        <div
+          className="flex items-center justify-between mb-5 pb-3.5"
+          style={{ borderBottom: '1px solid var(--border-default)' }}
+        >
+          <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Spending Calendar</h3>
           {calendarNav}
         </div>
       )}
@@ -489,7 +523,14 @@ export function TransactionCalendar({ inline = false }: { inline?: boolean }) {
 
   if (inline) {
     return (
-      <div className="max-w-2xl mx-auto rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <div
+        className="w-full rounded-2xl overflow-hidden"
+        style={{
+          background: 'var(--bg-elevated)',
+          border: '1px solid var(--border-default)',
+          boxShadow: 'var(--card-shadow)',
+        }}
+      >
         {monthViewContent}
       </div>
     );

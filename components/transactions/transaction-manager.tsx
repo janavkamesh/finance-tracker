@@ -470,6 +470,19 @@ export function TransactionManager({ initialTransactions, categories, activeMont
   const filterCats    = categories.map((c) => ({ id: c.id, name: c.name }));
   const selectedArray = Array.from(selectedIds);
 
+  // ── Pre-computed calendar data — seeds TransactionCalendar cache so the
+  //    current month renders instantly with zero network round-trip. ─────
+  const calendarInitialData = useMemo(() => {
+    const data: Record<string, { income: number; expense: number }> = {};
+    transactions.forEach((t) => {
+      if (t.id.startsWith("opt-")) return;
+      if (!data[t.date]) data[t.date] = { income: 0, expense: 0 };
+      if (t.type === "income") data[t.date].income += t.amount;
+      else data[t.date].expense += t.amount;
+    });
+    return data;
+  }, [transactions]);
+
   // ── Last 7 days summary (for calendar sidebar) ───────────────────
   const last7Days = useMemo(() => {
     const pad = (n: number) => String(n).padStart(2, "0");
@@ -642,14 +655,14 @@ export function TransactionManager({ initialTransactions, categories, activeMont
 
       {/* ── Calendar split layout ──────────────────────────────────── */}
       {viewMode === "calendar" && (
-        <div className="flex gap-5 items-start">
+        <div className="grid grid-cols-[65fr_35fr] gap-5 items-start">
           {/* Left: Spending Calendar (65%) */}
-          <div className="flex-[0_0_65%] min-w-0">
-            <TransactionCalendar inline />
+          <div className="min-w-0">
+            <TransactionCalendar inline initialDayData={calendarInitialData} />
           </div>
 
           {/* Right: Last 7 Days sidebar (35%) */}
-          <div className="flex-[0_0_35%] sticky top-4">
+          <div className="sticky top-4">
             <div
               className="rounded-2xl overflow-hidden"
               style={{
@@ -796,9 +809,9 @@ export function TransactionManager({ initialTransactions, categories, activeMont
 
       {/* ── Master-Detail layout ────────────────────────────────────── */}
       {viewMode === "list" && displayedTransactions.length > 0 && (
-        <div className="flex gap-5 items-start">
+        <div className="grid grid-cols-[65fr_35fr] gap-5 items-start">
           {/* ── Master: transaction list (65%) ──────────────────────── */}
-          <div className="flex-[0_0_65%] min-w-0">
+          <div className="min-w-0">
             <div
               className="w-full rounded-2xl overflow-hidden relative"
               style={{
@@ -1025,7 +1038,7 @@ export function TransactionManager({ initialTransactions, categories, activeMont
           </div>
 
           {/* ── Detail: transaction inspector (35%) ─────────────────── */}
-          <div className="flex-[0_0_35%] sticky top-4">
+          <div className="sticky top-4">
             <TransactionDetailPanel
               txn={detailTxn}
               categories={categories}

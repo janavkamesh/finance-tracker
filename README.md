@@ -744,6 +744,7 @@ CREATE POLICY "Users manage own accounts" ON public.accounts
 | 47 | Upcoming Bills Widget — recurring alerts and pre-filled transaction UX | ✅ built |
 | 48 | Master-Detail Transaction View — 65/35 split layout with sticky inspector panel, empty state, and full Edit/Delete actions in detail panel | ✅ built |
 | 49 | Calendar Split Layout + Last 7 Days Sidebar — calendar view mirrors 65/35 list proportions; sticky sidebar shows per-day income/expense and 7-day net; Select button hidden in calendar mode | ✅ built |
+| 50 | Transactions page polish — CSS Grid 65/35 fixes overflow alignment; calendar uses CSS vars for visual parity; instant calendar rendering via pre-seeded day-data cache from loaded transactions | ✅ built |
 
 ---
 
