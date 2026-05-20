@@ -31,7 +31,7 @@ export function TrendChartCard({ data }: Props) {
   return (
     <div className="h-full rounded-2xl border border-gray-100 bg-white p-4">
       {/* ── Header: title left, segmented control right ─────── */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-gray-900">
           {view === "monthly" ? "Monthly trend" : "Weekly trend"}
         </h2>

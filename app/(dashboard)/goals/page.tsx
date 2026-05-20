@@ -14,6 +14,7 @@ import { DeleteAccountButton } from "@/components/net-worth/delete-account-butto
 import { RecurringDialog } from "@/components/settings/recurring-dialog";
 import { DeleteRecurringButton } from "@/components/settings/delete-recurring-button";
 import { ASSET_TYPES, LIABILITY_TYPES, ACCOUNT_TYPE_LABELS } from "@/lib/validations/accounts";
+import { getCategoryIcon } from "@/lib/category-icons";
 
 function monthsRemaining(targetDate: string | null): number | null {
   if (!targetDate) return null;
@@ -54,7 +55,7 @@ export default async function GoalsPage() {
         .order("name"),
       supabase
         .from("recurring_transactions")
-        .select("id, type, amount, description, category_id, frequency, next_due_date, categories(name)")
+        .select("id, type, amount, description, category_id, frequency, next_due_date, categories(name, color, icon, user_id)")
         .eq("user_id", user!.id)
         .eq("is_active", true)
         .order("next_due_date"),
@@ -149,27 +150,58 @@ export default async function GoalsPage() {
             /* Bill list — scrolls internally if entries exceed the card height */
             <ul className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-white/5 min-h-0">
               {recurringList.map((r) => {
-                const cat = r.categories as unknown as { name: string } | null;
+                const cat = r.categories as unknown as { name: string; color: string | null; icon: string | null; user_id: string | null } | null;
                 const isIncome = r.type === "income";
+                const CatIcon = cat?.name
+                  ? getCategoryIcon({ name: cat.name, icon: cat.icon ?? undefined })
+                  : null;
+                const hasCustomColor = !!(cat?.user_id && cat?.color);
                 return (
                   <li
                     key={r.id}
                     className="flex items-center gap-3 px-5 py-3.5 group hover:bg-gray-50/50 transition-colors"
                   >
-                    <span
-                      className={`h-2 w-2 shrink-0 rounded-full ${
-                        isIncome ? "bg-green-500" : "bg-red-500"
-                      }`}
-                    />
+                    {/* Category icon — circular container matching transaction design */}
+                    <div
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                      style={
+                        hasCustomColor
+                          ? { backgroundColor: `${cat!.color}1f`, color: cat!.color! }
+                          : { backgroundColor: "#f3f4f6", color: "#6b7280" }
+                      }
+                    >
+                      {CatIcon ? (
+                        <CatIcon className="size-4" />
+                      ) : (
+                        <span
+                          className={`h-2 w-2 rounded-full ${isIncome ? "bg-green-500" : "bg-red-500"}`}
+                        />
+                      )}
+                    </div>
+
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{r.description}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {cat?.name} · {FREQUENCY_LABEL[r.frequency]} · Next:{" "}
-                        {new Date(r.next_due_date + "T00:00:00").toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                        })}
-                      </p>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        {cat?.name && (
+                          <span
+                            className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold leading-none"
+                            style={
+                              hasCustomColor
+                                ? { backgroundColor: `${cat!.color}1a`, color: cat!.color! }
+                                : { backgroundColor: "#f3f4f6", color: "#6b7280" }
+                            }
+                          >
+                            {cat.name}
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-400">
+                          {FREQUENCY_LABEL[r.frequency]} · Next:{" "}
+                          {new Date(r.next_due_date + "T00:00:00").toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                          })}
+                        </span>
+                      </div>
                     </div>
                     <span
                       className={`text-sm font-semibold tabular-nums shrink-0 ${

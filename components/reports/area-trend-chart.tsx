@@ -59,7 +59,7 @@ export function AreaTrendChart({ data, type }: Props) {
             <stop offset="95%" stopColor={color} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid vertical={false} stroke="#f0f0f0" />
+        <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
         <XAxis
           dataKey="month"
           tick={{ fontSize: 11, fill: "#9ca3af" }}
@@ -85,7 +85,9 @@ export function AreaTrendChart({ data, type }: Props) {
           }
           contentStyle={{
             borderRadius: 8,
-            border: "1px solid #e5e7eb",
+            border: "1px solid var(--chart-grid)",
+            background: "var(--bg-elevated)",
+            color: "var(--text-primary)",
             fontSize: 13,
           }}
         />

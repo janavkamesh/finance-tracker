@@ -108,7 +108,7 @@ export function CategoryPieChart({
   const title = view === "weekly" ? "This week's expenses" : "This month's expenses";
 
   const cardHeader = (
-    <div className="flex items-center justify-between gap-3 mb-2">
+    <div className="flex items-center justify-between gap-3 mb-4">
       <h2 className="text-sm font-semibold text-gray-900 whitespace-nowrap">{title}</h2>
 
       {/* Segmented control — identical to TrendChartCard */}

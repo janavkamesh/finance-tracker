@@ -48,7 +48,7 @@ export function MonthlyBarChart({
     <>
       <ResponsiveContainer width="100%" height={240}>
         <BarChart data={data} barCategoryGap="30%" barGap={4}>
-          <CartesianGrid vertical={false} stroke="#f0f0f0" />
+          <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
           <XAxis
             dataKey="month"
             tick={{ fontSize: 12, fill: "#9ca3af" }}
@@ -75,7 +75,9 @@ export function MonthlyBarChart({
             }
             contentStyle={{
               borderRadius: 8,
-              border: "1px solid #e5e7eb",
+              border: "1px solid var(--chart-grid)",
+              background: "var(--bg-elevated)",
+              color: "var(--text-primary)",
               fontSize: 13,
             }}
           />

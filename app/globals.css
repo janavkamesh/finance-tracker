@@ -403,6 +403,14 @@
   color: #F1F5F9 !important;
 }
 
+/* ── Chart grid lines — theme-adaptive token ──────────────────────────────── */
+/* Light: barely-there dark tint on white.  Dark: subtle white glow on obsidian.
+   Used as stroke="var(--chart-grid)" on every CartesianGrid in the app.        */
+:root        { --chart-grid: rgba(0,   0,   0,   0.06); }
+.dark,
+[data-theme="dark"],
+[data-mode="dark"] { --chart-grid: rgba(255, 255, 255, 0.09); }
+
 /* ── Suppress focus-ring on all Recharts interactive elements ─────────────── */
 /* Clicking a chart area, pie sector, or bar shows a browser focus outline    */
 /* (square border). Remove it globally; hover/active animations are unaffected */

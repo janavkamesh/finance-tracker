@@ -2,11 +2,22 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect } from "react";
 
 export function YearSelector({ year }: { year: number }) {
   const router = useRouter();
   const pathname = usePathname();
   const currentYear = new Date().getFullYear();
+
+  // After the current year renders, silently warm the router cache for
+  // adjacent years so the first click is instant with no visible spinner.
+  useEffect(() => {
+    router.prefetch(`${pathname}?year=${year - 1}`);
+    router.prefetch(`${pathname}?year=${year - 2}`);
+    if (year < currentYear) {
+      router.prefetch(`${pathname}?year=${year + 1}`);
+    }
+  }, [year, pathname, router, currentYear]);
 
   function go(y: number) {
     router.replace(`${pathname}?year=${y}`);
