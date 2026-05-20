@@ -233,10 +233,14 @@ export function CategoryPicker({
 
   // ── Portal overlay panel ────────────────────────────────────────────────
   const panel = (
-    // Backdrop — clicking it closes ONLY the category picker
+    // Backdrop — clicking it closes ONLY the category picker.
+    // onPointerDown with stopImmediatePropagation prevents Base UI's document-level
+    // outside-click detector from seeing pointer events that originate inside this
+    // portal (which lives on document.body, outside the parent dialog's DOM tree).
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center"
       onMouseDown={handleClose}
+      onPointerDown={(e) => e.nativeEvent.stopImmediatePropagation()}
     >
       {/* Panel — stopPropagation so clicks inside don't hit the backdrop */}
       <div
@@ -245,6 +249,7 @@ export function CategoryPicker({
         aria-label={view === "list" ? "Choose category" : "Create category"}
         className="relative w-full max-w-sm rounded-xl bg-white border border-gray-200 shadow-2xl overflow-hidden"
         onMouseDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); }}
       >
         {view === "list" ? (
           <>

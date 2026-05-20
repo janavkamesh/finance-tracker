@@ -307,8 +307,23 @@ export function TransactionManager({ initialTransactions, categories, activeMont
   const [isFetching, setIsFetching] = useState(false);
   const [offset, setOffset] = useState(20);
 
+  // Track the previous initialTransactions to skip reference-only changes
+  // (Next.js RSC re-renders create new array references even with identical data,
+  // which would wipe optimistic entries before the real transaction arrives)
+  const prevInitRef = useRef(initialTransactions);
+
   // Sync when server-side filters change (search / period / category)
   useEffect(() => {
+    const prev = prevInitRef.current;
+    prevInitRef.current = initialTransactions;
+
+    // If only the reference changed but IDs are identical, skip the replacement
+    // so any pending optimistic entries are preserved until the real row arrives.
+    const idsUnchanged =
+      initialTransactions.length === prev.length &&
+      initialTransactions.every((t, i) => t.id === prev[i]?.id);
+    if (idsUnchanged) return;
+
     setTransactions(initialTransactions);
     setOffset(20);
     setHasMore(initialTransactions.length === 20);
