@@ -554,17 +554,9 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                             <div
                               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
                               style={
-                                !(txn.category_user_id && txn.category_color)
-                                  ? { background: 'var(--tag-bg)', color: 'var(--text-secondary)' }
-                                  : undefined
-                              }
-                              style={
                                 txn.category_user_id && txn.category_color
-                                  ? {
-                                      backgroundColor: `${txn.category_color}1f`,
-                                      color: txn.category_color,
-                                    }
-                                  : undefined
+                                  ? { backgroundColor: `${txn.category_color}1f`, color: txn.category_color }
+                                  : { background: 'var(--tag-bg)', color: 'var(--text-secondary)' }
                               }
                             >
                               {Icon ? (
