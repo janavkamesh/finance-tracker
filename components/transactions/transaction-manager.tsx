@@ -991,11 +991,6 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                                 >
                                   {isIncome ? "+" : "-"}{formatINR(txn.amount)}
                                 </span>
-                                {paymentLabel && (
-                                  <p className="text-[10px] mt-0.5 tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
-                                    {paymentLabel}
-                                  </p>
-                                )}
                               </div>
 
                               {/* Col 3 — Quick actions (icon-only, shown on hover) */}
