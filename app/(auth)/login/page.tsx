@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -10,7 +11,7 @@ import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 import { signIn } from "@/actions/auth";
 import { DashboardPreview } from "@/components/auth/dashboard-preview";
 
-export default function LoginPage() {
+function LoginForm() {
   const searchParams = useSearchParams();
 
   // Show NextAuth error messages surfaced via ?error= query param
@@ -45,10 +46,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex bg-[#F9F8F5]">
-      {/* ── Left: Form ── */}
-      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
-        <div className="w-full max-w-sm">
+    <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#1E6B4E] mb-4">
@@ -149,7 +147,18 @@ export default function LoginPage() {
             </svg>
             Your data is encrypted and never shared
           </p>
-        </div>
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <main className="min-h-screen flex bg-[#F9F8F5]">
+      {/* ── Left: Form ── */}
+      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
+        <Suspense fallback={<p className="text-sm text-gray-400">Loading…</p>}>
+          <LoginForm />
+        </Suspense>
       </div>
 
       {/* ── Right: Dashboard preview (desktop only) ── */}
