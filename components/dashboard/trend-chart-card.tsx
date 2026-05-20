@@ -4,28 +4,52 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { MonthlyBarChart, type MonthlyData } from "@/components/dashboard/monthly-bar-chart";
 
-interface Props {
-  data: MonthlyData[]; // 6-month aggregated data from server
+interface Transaction {
+  date: string;   // "YYYY-MM-DD"
+  type: string;   // "income" | "expense"
+  amount: number | string;
 }
 
-const INCOME_WEIGHTS  = [0.72, 0.10, 0.13, 0.05];
-const EXPENSE_WEIGHTS = [0.20, 0.27, 0.30, 0.23];
+interface Props {
+  data: MonthlyData[];           // 6-month aggregated data for monthly view
+  transactions: Transaction[];   // current-month transactions for weekly bucketing
+}
 
-function buildWeeklyData(monthly: MonthlyData[]): MonthlyData[] {
-  const current = monthly[monthly.length - 1] ?? { month: "", income: 0, expense: 0 };
-  return INCOME_WEIGHTS.map((iw, i) => ({
-    month: `Week ${i + 1}`,
-    income:  Math.round(current.income  * iw),
-    expense: Math.round(current.expense * EXPENSE_WEIGHTS[i]),
-  }));
+function getWeekBucket(day: number): number {
+  if (day <= 7)  return 0;
+  if (day <= 14) return 1;
+  if (day <= 21) return 2;
+  return 3;
+}
+
+function buildWeeklyData(transactions: Transaction[]): MonthlyData[] {
+  const buckets: MonthlyData[] = [
+    { month: "Week 1", income: 0, expense: 0 },
+    { month: "Week 2", income: 0, expense: 0 },
+    { month: "Week 3", income: 0, expense: 0 },
+    { month: "Week 4", income: 0, expense: 0 },
+  ];
+
+  for (const t of transactions) {
+    const day = parseInt(t.date.split("-")[2], 10);
+    const bucket = getWeekBucket(day);
+    const amount = Number(t.amount);
+    if (t.type === "income") {
+      buckets[bucket].income += amount;
+    } else {
+      buckets[bucket].expense += amount;
+    }
+  }
+
+  return buckets;
 }
 
 type View = "weekly" | "monthly";
 
-export function TrendChartCard({ data }: Props) {
+export function TrendChartCard({ data, transactions }: Props) {
   const [view, setView] = useState<View>("weekly");
 
-  const weeklyData = buildWeeklyData(data);
+  const weeklyData = buildWeeklyData(transactions);
   const chartData  = view === "monthly" ? data : weeklyData;
 
   return (

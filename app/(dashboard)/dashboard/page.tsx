@@ -372,7 +372,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 mb-4">
         {/* Weekly / Monthly trend toggle — 2/3 width on large screens */}
         <div className="lg:col-span-2">
-          <TrendChartCard data={monthlyData} />
+          <TrendChartCard data={monthlyData} transactions={currentMonthTxns} />
         </div>
 
         {/* Right column — Category donut stacked above Upcoming Bills */}
