@@ -51,6 +51,12 @@ interface Props {
   categories: Category[];
   transaction?: Transaction;
   triggerVariant?: "primary" | "secondary";
+  /** Override the trigger button's className (used by detail panel for full-width edit button) */
+  triggerClassName?: string;
+  /** Override the trigger button's inline style */
+  triggerStyle?: React.CSSProperties;
+  /** Override the trigger button's label/children */
+  triggerLabel?: React.ReactNode;
   /** Active month in "YYYY-MM" format. When a past month is provided the date
    *  field defaults to the 1st of that month so the user stays in context.
    *  Current/future months fall back to today. */
@@ -191,7 +197,7 @@ function getInitialDate(activeMonth?: string): string {
 }
 
 // ── Main dialog ───────────────────────────────────────────────────
-export function TransactionDialog({ categories, transaction, triggerVariant = "primary", activeMonth, onOptimisticAdd, onOptimisticRemove }: Props) {
+export function TransactionDialog({ categories, transaction, triggerVariant = "primary", triggerClassName, triggerStyle, triggerLabel, activeMonth, onOptimisticAdd, onOptimisticRemove }: Props) {
   const [open, setOpen] = useState(false);
   const [showCalc, setShowCalc] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string>(
@@ -296,7 +302,16 @@ export function TransactionDialog({ categories, transaction, triggerVariant = "p
 
   return (
     <>
-      {isEdit ? (
+      {isEdit && triggerClassName ? (
+        <button
+          onClick={() => setOpen(true)}
+          className={triggerClassName}
+          style={triggerStyle}
+          aria-label="Edit transaction"
+        >
+          {triggerLabel ?? <><Pencil className="size-3.5" />Edit Transaction</>}
+        </button>
+      ) : isEdit ? (
         <button
           onClick={() => setOpen(true)}
           className="flex items-center justify-center rounded-lg p-2 transition-colors hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[rgba(255,255,255,0.06)]"

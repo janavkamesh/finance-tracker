@@ -742,6 +742,8 @@ CREATE POLICY "Users manage own accounts" ON public.accounts
 | 45 | MoM Summary Deltas — dynamic comparative stats in transaction header | ✅ built |
 | 46 | Active Goal Progress Widget — interactive savings goals in dashboard sidebar | ✅ built |
 | 47 | Upcoming Bills Widget — recurring alerts and pre-filled transaction UX | ✅ built |
+| 48 | Master-Detail Transaction View — 65/35 split layout with sticky inspector panel, empty state, and full Edit/Delete actions in detail panel | ✅ built |
+| 49 | Calendar Split Layout + Last 7 Days Sidebar — calendar view mirrors 65/35 list proportions; sticky sidebar shows per-day income/expense and 7-day net; Select button hidden in calendar mode | ✅ built |
 
 ---
 

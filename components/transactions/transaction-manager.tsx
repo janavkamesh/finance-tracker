@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { List, CalendarDays, CheckSquare, X } from "lucide-react";
+import { List, CalendarDays, CheckSquare, X, Receipt, Pencil, Trash2 } from "lucide-react";
 import { TransactionFilters } from "./transaction-filters";
 import { TransactionDialog } from "./transaction-dialog";
 import { DeleteTransactionButton } from "./delete-transaction-button";
@@ -77,10 +77,223 @@ const TYPE_TABS = [
   { value: "expense", label: "Expense" },
 ] as const;
 
+// ── Detail Panel ──────────────────────────────────────────────────────────────
+function TransactionDetailPanel({
+  txn,
+  categories,
+  activeMonth,
+}: {
+  txn: TxnRow | null;
+  categories: CategoryItem[];
+  activeMonth?: string;
+}) {
+  if (!txn) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center rounded-2xl h-full min-h-[320px] text-center px-8 py-12"
+        style={{
+          background: 'var(--bg-elevated)',
+          border: '1px solid var(--border-default)',
+          boxShadow: 'var(--card-shadow)',
+        }}
+      >
+        <div
+          className="flex h-14 w-14 items-center justify-center rounded-2xl mb-4"
+          style={{ background: 'var(--tag-bg)' }}
+        >
+          <Receipt className="size-6" style={{ color: 'var(--text-tertiary)' }} />
+        </div>
+        <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
+          No transaction selected
+        </p>
+        <p className="text-xs leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
+          Select a transaction to view details.
+        </p>
+      </div>
+    );
+  }
+
+  const isIncome = txn.type === "income";
+  const isOptimistic = txn.id.startsWith("opt-");
+  const Icon = txn.category_name
+    ? getCategoryIcon({ name: txn.category_name, icon: txn.category_icon ?? undefined })
+    : null;
+  const paymentLabel = txn.payment_method ? PAYMENT_LABELS[txn.payment_method] ?? txn.payment_method : null;
+
+  const dateObj = new Date(txn.date + "T00:00:00");
+  const formattedDate = dateObj.toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  return (
+    <div
+      className="flex flex-col rounded-2xl overflow-hidden"
+      style={{
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border-default)',
+        boxShadow: 'var(--card-shadow)',
+      }}
+    >
+      {/* Header strip */}
+      <div
+        className="px-5 py-3 flex items-center justify-between"
+        style={{ borderBottom: '1px solid var(--border-default)' }}
+      >
+        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>
+          Transaction Details
+        </span>
+        <span
+          className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+          style={
+            isIncome
+              ? { background: 'rgba(52,211,153,0.12)', color: 'var(--income-color)' }
+              : { background: 'rgba(248,113,113,0.12)', color: 'var(--expense-color)' }
+          }
+        >
+          {isIncome ? "Income" : "Expense"}
+        </span>
+      </div>
+
+      {/* Body */}
+      <div className="flex flex-col flex-1 px-5 py-5 gap-5">
+        {/* Category icon + description */}
+        <div className="flex items-center gap-3">
+          <div
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
+            style={
+              txn.category_user_id && txn.category_color
+                ? { backgroundColor: `${txn.category_color}22`, color: txn.category_color }
+                : { background: 'var(--tag-bg)', color: 'var(--text-secondary)' }
+            }
+          >
+            {Icon ? (
+              <Icon className="size-5" />
+            ) : (
+              <span
+                className={cn("h-3 w-3 rounded-full", isIncome ? "bg-green-500" : "bg-red-500")}
+              />
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="text-base font-semibold leading-tight truncate" style={{ color: 'var(--text-primary)' }}>
+              {txn.description || txn.category_name || "—"}
+            </p>
+            {txn.category_name && (
+              <span
+                className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold leading-none mt-1"
+                style={
+                  txn.category_user_id && txn.category_color
+                    ? { backgroundColor: `${txn.category_color}1a`, color: txn.category_color }
+                    : { background: 'var(--tag-bg)', color: 'var(--tag-text)' }
+                }
+              >
+                {txn.category_name}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Amount — hero number */}
+        <div
+          className="rounded-xl px-5 py-4 text-center"
+          style={
+            isIncome
+              ? { background: 'rgba(52,211,153,0.07)', border: '1px solid rgba(52,211,153,0.18)' }
+              : { background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.18)' }
+          }
+        >
+          <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-tertiary)' }}>
+            {isIncome ? "Amount Received" : "Amount Spent"}
+          </p>
+          <p
+            className="text-3xl font-bold tabular-nums tracking-tight"
+            style={{ color: isIncome ? 'var(--income-color)' : 'var(--expense-color)' }}
+          >
+            {isIncome ? "+" : "−"}{formatINR(txn.amount)}
+          </p>
+        </div>
+
+        {/* Meta rows */}
+        <div
+          className="rounded-xl divide-y overflow-hidden"
+          style={{ border: '1px solid var(--border-default)' }}
+        >
+          {/* Date */}
+          <div className="flex items-center justify-between px-4 py-3 gap-3">
+            <span className="text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>Date</span>
+            <span className="text-xs font-semibold text-right" style={{ color: 'var(--text-primary)' }}>
+              {formattedDate}
+            </span>
+          </div>
+
+          {/* Payment method */}
+          <div className="flex items-center justify-between px-4 py-3 gap-3">
+            <span className="text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>Paid via</span>
+            {paymentLabel ? (
+              <span
+                className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-md"
+                style={{ background: 'var(--tag-bg)', color: 'var(--tag-text)', border: '1px solid var(--tag-border)' }}
+              >
+                {paymentLabel}
+              </span>
+            ) : (
+              <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>—</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer actions */}
+      {!isOptimistic && (
+        <div
+          className="px-5 pb-5 pt-1 flex flex-col gap-2"
+        >
+          {/* Edit button — primary */}
+          <TransactionDialog
+            categories={categories}
+            activeMonth={activeMonth}
+            transaction={{
+              id: txn.id,
+              type: txn.type,
+              amount: txn.amount,
+              category_id: txn.category_id,
+              description: txn.description,
+              date: txn.date,
+            }}
+            triggerClassName="w-full inline-flex items-center justify-center gap-2 h-10 rounded-xl text-sm font-semibold transition-all"
+            triggerStyle={{
+              background: 'var(--cta-primary-bg)',
+              color: 'var(--cta-primary-text)',
+              border: '1px solid var(--cta-primary-border)',
+            }}
+            triggerLabel={
+              <>
+                <Pencil className="size-3.5" />
+                Edit Transaction
+              </>
+            }
+          />
+          {/* Delete button — secondary/destructive */}
+          <DeleteTransactionButton
+            id={txn.id}
+            variant="full"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function TransactionManager({ initialTransactions, categories, activeMonth, emptyMessage, filters }: Props) {
   // ── Selection state ───────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
+
+  // ── Master-Detail: selected transaction for the right panel ───────
+  const [detailTxn, setDetailTxn] = useState<TxnRow | null>(null);
 
   // ── View toggle (List / Calendar) — UI only for now ───────────────
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
@@ -100,6 +313,7 @@ export function TransactionManager({ initialTransactions, categories, activeMont
     setOffset(20);
     setHasMore(initialTransactions.length === 20);
     setSelectedIds(new Set());
+    setDetailTxn(null);
     // Keep typeTab so switching period doesn't reset the user's tab choice
   }, [initialTransactions]);
 
@@ -168,19 +382,16 @@ export function TransactionManager({ initialTransactions, categories, activeMont
 
   const removeOptimistic = useCallback((tempId: string) => {
     setTransactions((prev) => prev.filter((t) => t.id !== tempId));
+    setDetailTxn((prev) => (prev?.id === tempId ? null : prev));
   }, []);
 
   // ── Live URL params drive instant client-side narrowing ───────────
-  // While the server re-fetches in the background (via useTransition in the
-  // filters component), we apply the new category / period / search filters
-  // to the currently-loaded set so the list updates in 0 ms instead of
-  // waiting on the network round-trip.
   const searchParams = useSearchParams();
   const liveCategory = searchParams.get("category") ?? "";
   const livePeriod   = searchParams.get("period") ?? "this_month";
   const liveSearch   = (searchParams.get("search") ?? "").trim().toLowerCase();
 
-  // Period → inclusive date range, evaluated on the client for instant filtering.
+  // Period → inclusive date range
   const periodRange = useMemo<{ start?: string; end?: string }>(() => {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, "0");
@@ -200,12 +411,9 @@ export function TransactionManager({ initialTransactions, categories, activeMont
     if (livePeriod === "3_months") {
       return { start: fmt(new Date(now.getFullYear(), now.getMonth() - 2, 1)) };
     }
-    return {}; // all time
+    return {};
   }, [livePeriod]);
 
-  // Client-side narrowing applied on top of the already-loaded transactions.
-  // Optimistic rows (pending writes) bypass these filters so they don't
-  // disappear mid-save.
   const clientFiltered = useMemo(() => {
     return transactions.filter((t) => {
       if (t.id.startsWith("opt-")) return true;
@@ -221,14 +429,11 @@ export function TransactionManager({ initialTransactions, categories, activeMont
     });
   }, [transactions, liveCategory, periodRange, liveSearch]);
 
-  // ── Client-side type filtering (instant, 0 ms) ────────────────────
   const displayedTransactions = useMemo(
     () => typeTab === "all" ? clientFiltered : clientFiltered.filter((t) => t.type === typeTab),
     [clientFiltered, typeTab]
   );
 
-  // Tab counts (computed from the client-filtered set so they reflect the
-  // current category/period/search context)
   const incomeCount  = useMemo(() => clientFiltered.filter((t) => t.type === "income").length,  [clientFiltered]);
   const expenseCount = useMemo(() => clientFiltered.filter((t) => t.type === "expense").length, [clientFiltered]);
 
@@ -255,7 +460,7 @@ export function TransactionManager({ initialTransactions, categories, activeMont
 
   function handleTypeTab(tab: "all" | "income" | "expense") {
     setTypeTab(tab);
-    setSelectedIds(new Set()); // clear selection when switching tabs
+    setSelectedIds(new Set());
   }
 
   const clearSelection = useCallback(() => {
@@ -265,12 +470,28 @@ export function TransactionManager({ initialTransactions, categories, activeMont
   const filterCats    = categories.map((c) => ({ id: c.id, name: c.name }));
   const selectedArray = Array.from(selectedIds);
 
+  // ── Last 7 days summary (for calendar sidebar) ───────────────────
+  const last7Days = useMemo(() => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const days: { dateStr: string; label: string; income: number; expense: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      const label = d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+      const dayTxns = transactions.filter((t) => t.date === dateStr && !t.id.startsWith("opt-"));
+      const income  = dayTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+      const expense = dayTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+      days.push({ dateStr, label, income, expense });
+    }
+    return days;
+  }, [transactions]);
+
   // ── Group displayed transactions by date ──────────────────────────
   const groupedTransactions = useMemo(() => {
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-    // Today/past: newest first. Future: soonest first, pushed below everything.
     const sorted = [...displayedTransactions].sort((a, b) => {
       const aFuture = a.date > todayStr;
       const bFuture = b.date > todayStr;
@@ -300,11 +521,9 @@ export function TransactionManager({ initialTransactions, categories, activeMont
         />
       ) : (
         <div className="mb-4 space-y-3">
-          {/* Row 1: Type tabs + filters + Add Transaction (all on one line, wraps gracefully) */}
           <div className="flex flex-wrap items-center gap-4">
-            {/* Left group: tabs + inline filters — grows to fill available space */}
             <div className="flex items-center flex-wrap gap-3 flex-1 min-w-0">
-              {/* Type tabs — pure local state, zero network request */}
+              {/* Type tabs */}
               <div
                 className="flex h-9 rounded-lg overflow-hidden text-sm font-medium shrink-0"
                 style={{ border: '1px solid var(--border-default)', background: 'var(--bg-elevated)' }}
@@ -346,11 +565,9 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                 })}
               </div>
 
-              {/* Search / period / category / export — rendered inline via display:contents */}
               <TransactionFilters categories={filterCats} showExportMenu wrapperClassName="contents" />
             </div>
 
-            {/* Add Transaction — pinned to the far right, never wraps early */}
             <div className="shrink-0 ml-auto">
               <TransactionDialog
                 categories={categories}
@@ -361,22 +578,26 @@ export function TransactionManager({ initialTransactions, categories, activeMont
             </div>
           </div>
 
-          {/* Row 2: Select toggle (left) + View toggle (right) */}
+          {/* Row 2: Select toggle (list only) + View toggle */}
           <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => setSelectionMode((s) => !s)}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-sm font-semibold shadow-sm transition-all focus:outline-none"
-              style={
-                selectionMode
-                  ? { background: 'var(--bg-active-nav)', color: 'var(--text-brand)', border: '1px solid var(--border-brand)' }
-                  : { background: 'var(--cta-secondary-bg)', color: 'var(--cta-secondary-text)', border: '1px solid var(--cta-secondary-border)' }
-              }
-              aria-pressed={selectionMode}
-            >
-              {selectionMode ? <X className="size-3.5" /> : <CheckSquare className="size-3.5" />}
-              {selectionMode ? "Cancel" : "Select"}
-            </button>
+            {viewMode === "list" ? (
+              <button
+                type="button"
+                onClick={() => setSelectionMode((s) => !s)}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-sm font-semibold shadow-sm transition-all focus:outline-none"
+                style={
+                  selectionMode
+                    ? { background: 'var(--bg-active-nav)', color: 'var(--text-brand)', border: '1px solid var(--border-brand)' }
+                    : { background: 'var(--cta-secondary-bg)', color: 'var(--cta-secondary-text)', border: '1px solid var(--cta-secondary-border)' }
+                }
+                aria-pressed={selectionMode}
+              >
+                {selectionMode ? <X className="size-3.5" /> : <CheckSquare className="size-3.5" />}
+                {selectionMode ? "Cancel" : "Select"}
+              </button>
+            ) : (
+              <div />
+            )}
 
             <div
               className="inline-flex h-9 items-center rounded-lg p-0.5 shadow-sm"
@@ -419,9 +640,118 @@ export function TransactionManager({ initialTransactions, categories, activeMont
         </div>
       )}
 
-      {/* ── Interactive calendar view ───────────────────────────────── */}
+      {/* ── Calendar split layout ──────────────────────────────────── */}
       {viewMode === "calendar" && (
-        <TransactionCalendar inline />
+        <div className="flex gap-5 items-start">
+          {/* Left: Spending Calendar (65%) */}
+          <div className="flex-[0_0_65%] min-w-0">
+            <TransactionCalendar inline />
+          </div>
+
+          {/* Right: Last 7 Days sidebar (35%) */}
+          <div className="flex-[0_0_35%] sticky top-4">
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-default)',
+                boxShadow: 'var(--card-shadow)',
+              }}
+            >
+              {/* Card header */}
+              <div
+                className="px-5 py-3.5"
+                style={{ borderBottom: '1px solid var(--border-default)' }}
+              >
+                <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                  Last 7 Days
+                </h3>
+              </div>
+
+              {/* Day rows */}
+              <div className="divide-y" style={{ borderColor: 'var(--border-default)' }}>
+                {last7Days.map(({ dateStr, label, income, expense }) => {
+                  const hasActivity = income > 0 || expense > 0;
+                  const isToday = dateStr === (() => {
+                    const n = new Date();
+                    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+                  })();
+                  return (
+                    <div
+                      key={dateStr}
+                      className="flex items-center gap-3 px-5 py-3"
+                      style={isToday ? { background: 'var(--bg-active-nav)' } : undefined}
+                    >
+                      {/* Date label */}
+                      <div className="w-14 shrink-0">
+                        <p
+                          className="text-xs font-semibold"
+                          style={{ color: isToday ? 'var(--text-brand)' : 'var(--text-primary)' }}
+                        >
+                          {label}
+                        </p>
+                        {isToday && (
+                          <p className="text-[10px]" style={{ color: 'var(--text-brand)' }}>Today</p>
+                        )}
+                      </div>
+
+                      {/* Income + Expense amounts */}
+                      <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                        {income > 0 && (
+                          <p className="text-xs font-semibold tabular-nums" style={{ color: 'var(--income-color)' }}>
+                            +{formatINR(income)}
+                          </p>
+                        )}
+                        {expense > 0 && (
+                          <p className="text-xs font-semibold tabular-nums" style={{ color: 'var(--expense-color)' }}>
+                            −{formatINR(expense)}
+                          </p>
+                        )}
+                        {!hasActivity && (
+                          <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>—</p>
+                        )}
+                      </div>
+
+                      {/* Net indicator dot */}
+                      {hasActivity && (
+                        <div
+                          className="h-1.5 w-1.5 rounded-full shrink-0"
+                          style={{
+                            background: income >= expense
+                              ? 'var(--income-color)'
+                              : 'var(--expense-color)',
+                          }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Footer: 7-day totals */}
+              {(() => {
+                const totalIncome  = last7Days.reduce((s, d) => s + d.income,  0);
+                const totalExpense = last7Days.reduce((s, d) => s + d.expense, 0);
+                return (
+                  <div
+                    className="px-5 py-3 flex items-center justify-between gap-3"
+                    style={{ borderTop: '1px solid var(--border-default)', background: 'var(--tag-bg)' }}
+                  >
+                    <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>
+                      7-Day Net
+                    </span>
+                    <span
+                      className="text-sm font-bold tabular-nums"
+                      style={{ color: totalIncome >= totalExpense ? 'var(--income-color)' : 'var(--expense-color)' }}
+                    >
+                      {totalIncome >= totalExpense ? "+" : "−"}{formatINR(Math.abs(totalIncome - totalExpense))}
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Empty state ────────────────────────────────────────────── */}
@@ -464,220 +794,243 @@ export function TransactionManager({ initialTransactions, categories, activeMont
         </div>
       )}
 
-      {/* ── Transaction list ───────────────────────────────────────── */}
+      {/* ── Master-Detail layout ────────────────────────────────────── */}
       {viewMode === "list" && displayedTransactions.length > 0 && (
-        <div
-          className="w-full rounded-2xl overflow-hidden relative"
-          style={{
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--border-default)',
-            boxShadow: 'var(--card-shadow)',
-          }}
-        >
-          {/* List header — always shows the title; checkbox row only in selection mode */}
-          <div
-            className="flex items-center justify-between gap-3 px-5 py-3.5 sticky top-0 z-10"
-            style={{
-              background: 'var(--bg-elevated)',
-              borderBottom: '1px solid var(--border-default)',
-            }}
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              {selectionMode && (
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={toggleAll}
-                  className="h-4 w-4 rounded border-gray-300 accent-[#1E6B4E] cursor-pointer"
-                  aria-label="Select all transactions"
-                />
-              )}
-              <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>All Transactions</h2>
-              <span className="text-xs tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
-                {selectionMode && someSelected
-                  ? `${selectedIds.size} of ${displayedTransactions.length} selected`
-                  : `${displayedTransactions.length} ${displayedTransactions.length === 1 ? "item" : "items"}`}
-              </span>
-            </div>
-          </div>
-
-          <div
-            key={liveSearch}
-            className="divide-y divide-gray-100 dark:divide-white/5 animate-in fade-in duration-200"
-          >
-            {Object.entries(groupedTransactions).map(([dateLabel, txns]) => (
-              <div key={dateLabel}>
-                {/* Date group sub-header */}
-                <div
-                  className="px-4 py-1.5 sticky top-10 z-10"
-                  style={{
-                    background: 'var(--bg-elevated)',
-                    borderBottom: '1px solid var(--border-default)',
-                  }}
-                >
-                  <h3
-                    className="text-xs font-semibold uppercase tracking-wider"
-                    style={{ color: 'var(--text-tertiary)' }}
-                  >
-                    {dateLabel}
-                  </h3>
+        <div className="flex gap-5 items-start">
+          {/* ── Master: transaction list (65%) ──────────────────────── */}
+          <div className="flex-[0_0_65%] min-w-0">
+            <div
+              className="w-full rounded-2xl overflow-hidden relative"
+              style={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-default)',
+                boxShadow: 'var(--card-shadow)',
+              }}
+            >
+              {/* List header */}
+              <div
+                className="flex items-center justify-between gap-3 px-5 py-3.5 sticky top-0 z-10"
+                style={{
+                  background: 'var(--bg-elevated)',
+                  borderBottom: '1px solid var(--border-default)',
+                }}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {selectionMode && (
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={toggleAll}
+                      className="h-4 w-4 rounded border-gray-300 accent-[#1E6B4E] cursor-pointer"
+                      aria-label="Select all transactions"
+                    />
+                  )}
+                  <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>All Transactions</h2>
+                  <span className="text-xs tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
+                    {selectionMode && someSelected
+                      ? `${selectedIds.size} of ${displayedTransactions.length} selected`
+                      : `${displayedTransactions.length} ${displayedTransactions.length === 1 ? "item" : "items"}`}
+                  </span>
                 </div>
+              </div>
 
-                <ul className="divide-y divide-gray-100 dark:divide-white/5">
-                  {txns.map((txn) => {
-                    const isIncome  = txn.type === "income";
-                    const isSelected = selectedIds.has(txn.id);
-                    const isOptimistic = txn.id.startsWith("opt-");
-                    const Icon = txn.category_name
-                      ? getCategoryIcon({ name: txn.category_name, icon: txn.category_icon ?? undefined })
-                      : null;
-
-                    const paymentLabel = txn.payment_method
-                      ? PAYMENT_LABELS[txn.payment_method] ?? null
-                      : null;
-
-                    return (
-                      <li
-                        key={txn.id}
-                        className={cn(
-                          "flex items-center gap-3 px-5 py-3 transition-colors group",
-                          isSelected
-                            ? "bg-[rgba(22,101,52,0.08)] dark:bg-[rgba(0,185,107,0.10)]"
-                            : "hover:bg-[rgba(22,101,52,0.05)] dark:hover:bg-[rgba(0,185,107,0.06)]",
-                          isOptimistic ? "opacity-70" : ""
-                        )}
+              <div
+                key={liveSearch}
+                className="divide-y animate-in fade-in duration-200"
+                style={{ borderColor: 'var(--border-default)' }}
+              >
+                {Object.entries(groupedTransactions).map(([dateLabel, txns]) => (
+                  <div key={dateLabel}>
+                    {/* Date group sub-header */}
+                    <div
+                      className="px-4 py-1.5 sticky top-10 z-10"
+                      style={{
+                        background: 'var(--bg-elevated)',
+                        borderBottom: '1px solid var(--border-default)',
+                      }}
+                    >
+                      <h3
+                        className="text-xs font-semibold uppercase tracking-wider"
+                        style={{ color: 'var(--text-tertiary)' }}
                       >
-                        {/* Checkbox — only when in selection mode */}
-                        {selectionMode && (
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleOne(txn.id)}
-                            disabled={isOptimistic}
-                            className="h-4 w-4 rounded border-gray-300 accent-[#1E6B4E] cursor-pointer shrink-0"
-                            aria-label={`Select ${txn.description || txn.category_name || "transaction"}`}
-                          />
-                        )}
+                        {dateLabel}
+                      </h3>
+                    </div>
 
-                        {/* Strict 4-column grid — Col widths: 50% | 15% | 20% | 15% */}
-                        <div
-                          className="grid flex-1 min-w-0 items-center gap-x-3"
-                          style={{ gridTemplateColumns: "2fr 0.6fr 0.8fr 0.6fr" }}
-                        >
-                          {/* Col 1 — Context (50%): icon + description + date + category pill */}
-                          <div className="flex items-center gap-3 min-w-0">
+                    <ul className="divide-y divide-gray-50">
+                      {txns.map((txn) => {
+                        const isIncome   = txn.type === "income";
+                        const isSelected = selectedIds.has(txn.id);
+                        const isDetail   = detailTxn?.id === txn.id;
+                        const isOptimistic = txn.id.startsWith("opt-");
+                        const Icon = txn.category_name
+                          ? getCategoryIcon({ name: txn.category_name, icon: txn.category_icon ?? undefined })
+                          : null;
+
+                        const paymentLabel = txn.payment_method
+                          ? PAYMENT_LABELS[txn.payment_method] ?? null
+                          : null;
+
+                        return (
+                          <li
+                            key={txn.id}
+                            onClick={() => !selectionMode && setDetailTxn(isDetail ? null : txn)}
+                            className={cn(
+                              "flex items-center gap-3 px-5 py-3 transition-colors group",
+                              !selectionMode && "cursor-pointer",
+                              isSelected
+                                ? "bg-[rgba(22,101,52,0.08)] dark:bg-[rgba(0,185,107,0.10)]"
+                                : isDetail
+                                  ? "bg-[rgba(22,101,52,0.06)] dark:bg-[rgba(0,185,107,0.08)]"
+                                  : "hover:bg-[rgba(22,101,52,0.05)] dark:hover:bg-[rgba(0,185,107,0.06)]",
+                              isOptimistic ? "opacity-70" : ""
+                            )}
+                          >
+                            {/* Active indicator bar */}
+                            {isDetail && !isSelected && (
+                              <div
+                                className="absolute left-0 top-0 bottom-0 w-0.5 rounded-r"
+                                style={{ background: 'var(--text-brand)' }}
+                              />
+                            )}
+
+                            {/* Checkbox — only in selection mode */}
+                            {selectionMode && (
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleOne(txn.id)}
+                                disabled={isOptimistic}
+                                onClick={(e) => e.stopPropagation()}
+                                className="h-4 w-4 rounded border-gray-300 accent-[#1E6B4E] cursor-pointer shrink-0"
+                                aria-label={`Select ${txn.description || txn.category_name || "transaction"}`}
+                              />
+                            )}
+
+                            {/* 3-column grid for master list (drop method column to save width) */}
                             <div
-                              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-                              style={
-                                txn.category_user_id && txn.category_color
-                                  ? { backgroundColor: `${txn.category_color}1f`, color: txn.category_color }
-                                  : { background: 'var(--tag-bg)', color: 'var(--text-secondary)' }
-                              }
+                              className="grid flex-1 min-w-0 items-center gap-x-3"
+                              style={{ gridTemplateColumns: "1fr auto auto" }}
                             >
-                              {Icon ? (
-                                <Icon className="size-4" />
-                              ) : (
-                                <span className={cn(
-                                  "h-2 w-2 rounded-full",
-                                  isIncome ? "bg-green-500" : "bg-red-500"
-                                )} />
-                              )}
-                            </div>
+                              {/* Col 1 — Context: icon + description + date + category pill */}
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                                  style={
+                                    txn.category_user_id && txn.category_color
+                                      ? { backgroundColor: `${txn.category_color}1f`, color: txn.category_color }
+                                      : { background: 'var(--tag-bg)', color: 'var(--text-secondary)' }
+                                  }
+                                >
+                                  {Icon ? (
+                                    <Icon className="size-4" />
+                                  ) : (
+                                    <span className={cn(
+                                      "h-2 w-2 rounded-full",
+                                      isIncome ? "bg-green-500" : "bg-red-500"
+                                    )} />
+                                  )}
+                                </div>
 
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-                                {txn.description || txn.category_name || "—"}
-                                {isOptimistic && (
-                                  <span className="ml-1.5 text-[10px] text-gray-400 font-normal">saving…</span>
-                                )}
-                              </p>
-                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                <span className="text-xs shrink-0 tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
-                                  {new Date(txn.date + "T00:00:00").toLocaleDateString("en-IN", {
-                                    day: "numeric", month: "short", year: "numeric",
-                                  })}
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                                    {txn.description || txn.category_name || "—"}
+                                    {isOptimistic && (
+                                      <span className="ml-1.5 text-[10px] text-gray-400 font-normal">saving…</span>
+                                    )}
+                                  </p>
+                                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                    <span className="text-xs shrink-0 tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
+                                      {new Date(txn.date + "T00:00:00").toLocaleDateString("en-IN", {
+                                        day: "numeric", month: "short", year: "numeric",
+                                      })}
+                                    </span>
+                                    {txn.category_name && (
+                                      <span
+                                        className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold leading-none"
+                                        style={
+                                          txn.category_user_id && txn.category_color
+                                            ? { backgroundColor: `${txn.category_color}1a`, color: txn.category_color }
+                                            : { background: 'var(--tag-bg)', color: 'var(--tag-text)' }
+                                        }
+                                      >
+                                        {txn.category_name}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Col 2 — Amount */}
+                              <div className="text-right shrink-0">
+                                <span
+                                  className="text-sm font-semibold tabular-nums"
+                                  style={{ color: isIncome ? 'var(--income-color)' : 'var(--expense-color)' }}
+                                >
+                                  {isIncome ? "+" : "-"}{formatINR(txn.amount)}
                                 </span>
-                                {txn.category_name && (
-                                  <span
-                                    className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold leading-none"
-                                    style={
-                                      txn.category_user_id && txn.category_color
-                                        ? { backgroundColor: `${txn.category_color}1a`, color: txn.category_color }
-                                        : { background: 'var(--tag-bg)', color: 'var(--tag-text)' }
-                                    }
-                                  >
-                                    {txn.category_name}
-                                  </span>
+                                {paymentLabel && (
+                                  <p className="text-[10px] mt-0.5 tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
+                                    {paymentLabel}
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* Col 3 — Quick actions (icon-only, shown on hover) */}
+                              <div
+                                className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {!isOptimistic && (
+                                  <>
+                                    <TransactionDialog
+                                      categories={categories}
+                                      transaction={{
+                                        id: txn.id,
+                                        type: txn.type,
+                                        amount: txn.amount,
+                                        category_id: txn.category_id,
+                                        description: txn.description,
+                                        date: txn.date,
+                                      }}
+                                    />
+                                    <DeleteTransactionButton id={txn.id} />
+                                  </>
                                 )}
                               </div>
                             </div>
-                          </div>
-
-                          {/* Col 2 — Method (15%): payment method pill, centered */}
-                          <div className="flex justify-center">
-                            {paymentLabel ? (
-                              <span
-                                className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide leading-none"
-                                style={{ background: 'var(--tag-bg)', color: 'var(--tag-text)', border: '1px solid var(--tag-border)' }}
-                              >
-                                {paymentLabel}
-                              </span>
-                            ) : (
-                              <span className="text-xs select-none" style={{ color: 'var(--text-tertiary)' }}>—</span>
-                            )}
-                          </div>
-
-                          {/* Col 3 — Amount (20%): right-aligned, income green / expense red */}
-                          <div className="text-right">
-                            <span
-                              className="text-sm font-semibold tabular-nums"
-                              style={{ color: isIncome ? 'var(--income-color)' : 'var(--expense-color)' }}
-                            >
-                              {isIncome ? "+" : "-"}{formatINR(txn.amount)}
-                            </span>
-                          </div>
-
-                          {/* Col 4 — Actions (15%): edit + delete pinned to far right */}
-                          <div className="flex items-center justify-end gap-0.5">
-                            {!isOptimistic && (
-                              <>
-                                <TransactionDialog
-                                  categories={categories}
-                                  transaction={{
-                                    id: txn.id,
-                                    type: txn.type,
-                                    amount: txn.amount,
-                                    category_id: txn.category_id,
-                                    description: txn.description,
-                                    date: txn.date,
-                                  }}
-                                />
-                                <DeleteTransactionButton id={txn.id} />
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ))}
               </div>
-            ))}
+
+              {/* Infinite scroll sentinel + skeleton */}
+              <div ref={loadMoreRef} className="w-full">
+                {isFetching && (
+                  <div className="px-4 py-4 animate-pulse border-t border-gray-50 flex items-center gap-3">
+                    <div className="h-4 w-4 bg-gray-200 rounded shrink-0" />
+                    <div className="h-2 w-2 bg-gray-200 rounded-full shrink-0" />
+                    <div className="flex-1">
+                      <div className="h-4 bg-gray-200 rounded w-1/3 mb-2" />
+                      <div className="h-3 bg-gray-100 rounded w-1/4" />
+                    </div>
+                    <div className="h-4 bg-gray-200 rounded w-16 shrink-0" />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Infinite scroll sentinel + skeleton */}
-          <div ref={loadMoreRef} className="w-full">
-            {isFetching && (
-              <div className="px-4 py-4 animate-pulse border-t border-gray-100 dark:border-white/5 flex items-center gap-3">
-                <div className="h-4 w-4 bg-gray-200 rounded shrink-0" />
-                <div className="h-2 w-2 bg-gray-200 rounded-full shrink-0" />
-                <div className="flex-1">
-                  <div className="h-4 bg-gray-200 rounded w-1/3 mb-2" />
-                  <div className="h-3 bg-gray-100 rounded w-1/4" />
-                </div>
-                <div className="h-4 bg-gray-200 rounded w-16 shrink-0" />
-              </div>
-            )}
+          {/* ── Detail: transaction inspector (35%) ─────────────────── */}
+          <div className="flex-[0_0_35%] sticky top-4">
+            <TransactionDetailPanel
+              txn={detailTxn}
+              categories={categories}
+              activeMonth={activeMonth}
+            />
           </div>
         </div>
       )}
