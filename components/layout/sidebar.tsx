@@ -9,9 +9,9 @@ interface SidebarProps {
 
 export function Sidebar({ fullName, userInitials }: SidebarProps) {
   return (
-    <aside className="flex h-screen w-60 shrink-0 flex-col border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 sticky top-0">
+    <aside className="flex h-screen w-60 shrink-0 flex-col sticky top-0" style={{ background: 'var(--bg-surface)', borderRight: 'var(--sidebar-border-rule)' }}>
       {/* Brand */}
-      <div className="flex h-[88px] items-center gap-2.5 border-b border-gray-100 dark:border-gray-800 px-4">
+      <div className="flex h-[88px] items-center gap-2.5 px-4" style={{ borderBottom: '1px solid var(--border-default)' }}>
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1E6B4E]">
           <svg
             className="h-4 w-4 text-white"
@@ -27,7 +27,7 @@ export function Sidebar({ fullName, userInitials }: SidebarProps) {
             />
           </svg>
         </div>
-        <span className="text-base font-bold tracking-tight text-gray-900 dark:text-gray-100">
+        <span className="text-base font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
           FinTrack
         </span>
         <div className="ml-auto">
@@ -41,12 +41,12 @@ export function Sidebar({ fullName, userInitials }: SidebarProps) {
       </div>
 
       {/* User + sign out */}
-      <div className="space-y-1 border-t border-gray-100 dark:border-gray-800 px-3 py-3">
+      <div className="space-y-1 px-3 py-3" style={{ borderTop: '1px solid var(--border-default)' }}>
         <div className="flex items-center gap-3 px-3 py-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1E6B4E]/10 text-xs font-semibold text-[#1E6B4E]">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold" style={{ background: 'var(--cta-primary-bg)', color: 'var(--cta-primary-text)' }}>
             {userInitials}
           </div>
-          <span className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+          <span className="truncate text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
             {fullName}
           </span>
         </div>

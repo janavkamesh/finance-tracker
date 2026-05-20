@@ -32,15 +32,24 @@ export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             href={href}
             prefetch={true}
             onClick={onNavigate}
+            style={
+              active
+                ? { background: 'var(--bg-active-nav)', color: 'var(--text-active-nav)' }
+                : undefined
+            }
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
               active
-                ? "bg-[#1E6B4E]/10 text-[#1E6B4E]"
-                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100",
+                ? "font-semibold"
+                : "hover:bg-[rgba(22,101,52,0.07)] dark:hover:bg-[rgba(0,185,107,0.08)]",
             )}
+            data-nav-inactive={!active ? "true" : undefined}
           >
-            <Icon className={cn("size-4 shrink-0", active ? "text-[#1E6B4E]" : "text-gray-400 dark:text-gray-500")} />
-            {label}
+            <Icon
+              className="size-4 shrink-0"
+              style={{ color: active ? 'var(--text-brand)' : 'var(--text-tertiary)' }}
+            />
+            <span style={{ color: active ? undefined : 'var(--text-muted-nav)' }}>{label}</span>
           </Link>
         );
       })}
