@@ -23,7 +23,12 @@ export function BottomNav() {
   }, [router]);
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 flex h-16 items-stretch border-t border-gray-100 bg-white md:hidden">
+    <nav
+      data-mobile-nav="true"
+      className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-950 md:hidden"
+      style={{ height: "calc(64px + env(safe-area-inset-bottom, 0px))" }}
+      aria-label="Main navigation"
+    >
       {TABS.map(({ label, href, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(href + "/");
         return (
@@ -31,13 +36,22 @@ export function BottomNav() {
             key={href}
             href={href}
             prefetch={true}
+            aria-label={label}
+            aria-current={active ? "page" : undefined}
             className={cn(
-              "flex flex-1 flex-col items-center justify-center gap-0.5 text-[9px] font-medium transition-colors",
-              active ? "text-[#1E6B4E]" : "text-gray-400 hover:text-gray-600",
+              "flex flex-1 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors min-h-[44px]",
+              active ? "text-[#1E6B4E] dark:text-emerald-400" : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400",
             )}
           >
-            <Icon className={cn("size-4 shrink-0", active ? "text-[#1E6B4E]" : "text-gray-400")} />
-            {label}
+            <Icon
+              className={cn(
+                "size-5 shrink-0 transition-transform duration-150",
+                active ? "text-[#1E6B4E] dark:text-emerald-400 scale-110" : "text-gray-400 dark:text-gray-500",
+              )}
+            />
+            <span className={cn("leading-none", active ? "font-semibold" : "font-medium")}>
+              {label}
+            </span>
           </Link>
         );
       })}

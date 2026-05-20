@@ -286,40 +286,64 @@ export default async function DashboardPage() {
 
   return (
     <>
-      {/* Sticky action bar — h-16 matches the sidebar's logo section so the
-          bottom borders line up flush across the sidebar/main seam. */}
-      <div className="sticky top-14 md:top-0 z-10 h-[88px] px-6 md:px-8 flex items-center justify-between gap-4" style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-default)' }}>
+      {/* Sticky action bar */}
+      <div
+        className="sticky z-10 flex items-center justify-between gap-4 px-4 md:px-8 h-[64px] md:h-[88px]"
+        style={{ top: 'var(--mobile-header-h, 56px)', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-default)' }}
+      >
         <div className="flex-1 min-w-0">
           <DynamicGreeting firstName={firstName} />
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <RecurringDialog categories={allCats ?? []} triggerVariant="secondary" />
+          <span className="hidden md:contents">
+            <RecurringDialog categories={allCats ?? []} triggerVariant="secondary" />
+          </span>
           <TransactionDialog categories={allCats ?? []} />
         </div>
       </div>
 
-    <main className="px-6 md:px-8 pb-8 pt-4">
-      {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
+    <main className="px-4 md:px-8 pb-8 pt-4">
+      {/* Summary cards — 1 column on mobile, 3 on md+ */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
         {summaryCards.map((card) => (
           <div
             key={card.label}
             className="rounded-xl px-4 py-3"
             style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}
           >
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="h-2 w-2 rounded-full" style={{ background: card.colorVar }} />
-              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{card.label}</span>
+            {/* Mobile: single row — label left, amount right */}
+            <div className="flex items-center justify-between gap-3 md:hidden">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="h-2 w-2 rounded-full shrink-0" style={{ background: card.colorVar }} />
+                <span className="text-sm font-medium truncate" style={{ color: 'var(--text-secondary)' }}>{card.label}</span>
+              </div>
+              <div className="flex items-baseline gap-2 shrink-0">
+                <p className="text-base font-bold tabular-nums" style={{ color: card.colorVar }}>
+                  {card.value}
+                </p>
+                {card.delta && (
+                  <span className="text-[11px] font-medium tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
+                    {card.delta.up ? "↑" : "↓"} {card.delta.label}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="flex items-baseline gap-2">
-              <p className="text-lg font-bold tabular-nums" style={{ color: card.colorVar }}>
-                {card.value}
-              </p>
-              {card.delta && (
-                <span className="text-[11px] font-medium tabular-nums truncate" style={{ color: 'var(--text-tertiary)' }}>
-                  {card.delta.up ? "↑" : "↓"} {card.delta.label}
-                </span>
-              )}
+            {/* Desktop: original stacked layout */}
+            <div className="hidden md:block">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="h-2 w-2 rounded-full" style={{ background: card.colorVar }} />
+                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{card.label}</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <p className="text-lg font-bold tabular-nums" style={{ color: card.colorVar }}>
+                  {card.value}
+                </p>
+                {card.delta && (
+                  <span className="text-[11px] font-medium tabular-nums truncate" style={{ color: 'var(--text-tertiary)' }}>
+                    {card.delta.up ? "↑" : "↓"} {card.delta.label}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         ))}

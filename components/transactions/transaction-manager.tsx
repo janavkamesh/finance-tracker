@@ -549,11 +549,11 @@ export function TransactionManager({ initialTransactions, categories, activeMont
         />
       ) : (
         <div className="mb-4 space-y-3">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center flex-wrap gap-3 flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center flex-wrap gap-2 md:gap-3 flex-1 min-w-0">
               {/* Type tabs */}
               <div
-                className="flex h-9 rounded-lg overflow-hidden text-sm font-medium shrink-0"
+                className="flex h-10 md:h-9 rounded-lg overflow-hidden text-sm font-medium shrink-0"
                 style={{ border: '1px solid var(--border-default)', background: 'var(--bg-elevated)' }}
               >
                 {TYPE_TABS.map(({ value, label }) => {
@@ -670,14 +670,14 @@ export function TransactionManager({ initialTransactions, categories, activeMont
 
       {/* ── Calendar split layout ──────────────────────────────────── */}
       {viewMode === "calendar" && (
-        <div className="grid grid-cols-[65fr_35fr] gap-5 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-[65fr_35fr] gap-5 items-start">
           {/* Left: Spending Calendar (65%) */}
           <div className="min-w-0">
             <TransactionCalendar inline initialDayData={calendarInitialData} />
           </div>
 
-          {/* Right: Last 7 Days sidebar (35%) */}
-          <div className="sticky top-4">
+          {/* Right: Last 7 Days sidebar (35%) — hidden on mobile */}
+          <div className="hidden md:block sticky top-4">
             <div
               className="rounded-2xl overflow-hidden"
               style={{
@@ -824,7 +824,7 @@ export function TransactionManager({ initialTransactions, categories, activeMont
 
       {/* ── Master-Detail layout ────────────────────────────────────── */}
       {viewMode === "list" && displayedTransactions.length > 0 && (
-        <div className="grid grid-cols-[65fr_35fr] gap-5 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-[65fr_35fr] gap-5 items-start">
           {/* ── Master: transaction list (65%) ──────────────────────── */}
           <div className="min-w-0">
             <div
@@ -904,7 +904,7 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                             key={txn.id}
                             onClick={() => !selectionMode && setDetailTxn(isDetail ? null : txn)}
                             className={cn(
-                              "flex items-center gap-3 px-5 py-3 transition-colors group",
+                              "flex items-center gap-3 px-4 md:px-5 py-3 transition-colors group min-h-[64px] md:min-h-0",
                               !selectionMode && "cursor-pointer",
                               isSelected
                                 ? "bg-[rgba(22,101,52,0.08)] dark:bg-[rgba(0,185,107,0.10)]"
@@ -1008,9 +1008,9 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                                 </span>
                               </div>
 
-                              {/* Col 3 — Quick actions (icon-only, shown on hover) */}
+                              {/* Col 3 — Quick actions: always visible on mobile, hover-only on desktop */}
                               <div
-                                className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="flex items-center gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 {!isOptimistic && (
@@ -1056,8 +1056,8 @@ export function TransactionManager({ initialTransactions, categories, activeMont
             </div>
           </div>
 
-          {/* ── Detail: transaction inspector (35%) ─────────────────── */}
-          <div className="sticky top-4">
+          {/* ── Detail: transaction inspector (35%) — hidden on mobile ── */}
+          <div className="hidden md:block sticky top-4">
             <TransactionDetailPanel
               txn={detailTxn}
               categories={categories}

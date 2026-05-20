@@ -8,7 +8,13 @@ interface MobileHeaderProps {
 
 export function MobileHeader({ fullName, userInitials }: MobileHeaderProps) {
   return (
-    <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 md:hidden">
+    <header
+      className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-gray-100 dark:border-gray-800 bg-white/95 dark:bg-gray-950/95 backdrop-blur-md px-4 md:hidden"
+      style={{
+        height: "calc(56px + env(safe-area-inset-top, 0px))",
+        paddingTop: "max(0px, env(safe-area-inset-top, 0px))",
+      }}
+    >
       <div className="flex items-center gap-2">
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1E6B4E]">
           <svg

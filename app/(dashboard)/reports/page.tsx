@@ -102,17 +102,20 @@ export default async function ReportsPage({
   return (
     <>
       {/* Sticky header — matches Home & Transactions */}
-      <div className="sticky top-14 md:top-0 z-10 bg-white border-b border-gray-100 h-[88px] px-6 md:px-8 flex items-center justify-between gap-4">
+      <div
+        className="sticky z-10 h-[64px] md:h-[88px] px-4 md:px-8 flex items-center justify-between gap-4"
+        style={{ top: 'var(--mobile-header-h, 56px)', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-default)' }}
+      >
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold text-gray-900">Insights</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Your annual income, expenses, and savings</p>
+          <h1 className="text-lg md:text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Insights</h1>
+          <p className="hidden md:block text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Your annual income, expenses, and savings</p>
         </div>
         <Suspense fallback={null}>
           <YearSelector year={year} />
         </Suspense>
       </div>
 
-    <main className="px-6 md:px-8 pb-8 pt-4">
+    <main className="px-4 md:px-8 pb-8 pt-4">
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 mb-6">

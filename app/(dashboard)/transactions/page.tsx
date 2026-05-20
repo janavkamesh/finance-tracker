@@ -200,11 +200,14 @@ export default async function TransactionsPage({
 
   return (
     <>
-      {/* Sticky header — identical height/padding to Home */}
-      <div className="sticky top-14 md:top-0 z-10 bg-white border-b border-gray-100 h-[88px] px-6 md:px-8 flex items-center justify-between gap-4">
+      {/* Sticky header */}
+      <div
+        className="sticky z-10 h-[64px] md:h-[88px] px-4 md:px-8 flex items-center justify-between gap-4"
+        style={{ top: 'var(--mobile-header-h, 56px)', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-default)' }}
+      >
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold text-gray-900">Transactions</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-lg md:text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Transactions</h1>
+          <p className="text-xs md:text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
             {txns.length === 0
               ? "No transactions match your filters"
               : `${txns.length} transaction${txns.length !== 1 ? "s" : ""} found`}
@@ -212,51 +215,83 @@ export default async function TransactionsPage({
         </div>
       </div>
 
-      <main className="px-6 md:px-8 pb-8 pt-4">
-        {/* Summary cards — 1:1 identical structure to Home */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="h-2 w-2 rounded-full bg-green-500" />
-              <span className="text-xs text-gray-500">Income</span>
+      <main className="px-4 md:px-8 pb-8 pt-4">
+        {/* Summary cards — 1 column on mobile, 3 on md+ */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+          <div className="rounded-xl px-4 py-3" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}>
+            {/* Mobile row */}
+            <div className="flex items-center justify-between gap-3 md:hidden">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
+                <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Income</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <p className="text-base font-bold tabular-nums" style={{ color: 'var(--income-color)' }}>{formatINR(totalIncome)}</p>
+                {incDelta && <span className="text-[11px] font-medium tabular-nums" style={{ color: 'var(--text-tertiary)' }}>{incDelta.up ? "↑" : "↓"} {incDelta.label}</span>}
+              </div>
             </div>
-            <div className="flex items-baseline gap-2">
-              <p className="text-lg font-bold tabular-nums text-green-600">{formatINR(totalIncome)}</p>
-              {incDelta && (
-                <span className="text-[11px] font-medium tabular-nums text-gray-400 truncate">
-                  {incDelta.up ? "↑" : "↓"} {incDelta.label}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="h-2 w-2 rounded-full bg-red-500" />
-              <span className="text-xs text-gray-500">Expenses</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <p className="text-lg font-bold tabular-nums text-red-600">{formatINR(totalExpense)}</p>
-              {expDelta && (
-                <span className="text-[11px] font-medium tabular-nums text-gray-400 truncate">
-                  {expDelta.up ? "↑" : "↓"} {expDelta.label}
-                </span>
-              )}
+            {/* Desktop stacked */}
+            <div className="hidden md:block">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="h-2 w-2 rounded-full bg-green-500" />
+                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Income</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--income-color)' }}>{formatINR(totalIncome)}</p>
+                {incDelta && <span className="text-[11px] font-medium tabular-nums truncate" style={{ color: 'var(--text-tertiary)' }}>{incDelta.up ? "↑" : "↓"} {incDelta.label}</span>}
+              </div>
             </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className={`h-2 w-2 rounded-full ${net >= 0 ? "bg-green-500" : "bg-red-500"}`} />
-              <span className="text-xs text-gray-500">Net savings</span>
+          <div className="rounded-xl px-4 py-3" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}>
+            {/* Mobile row */}
+            <div className="flex items-center justify-between gap-3 md:hidden">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-red-500 shrink-0" />
+                <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Expenses</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <p className="text-base font-bold tabular-nums" style={{ color: 'var(--expense-color)' }}>{formatINR(totalExpense)}</p>
+                {expDelta && <span className="text-[11px] font-medium tabular-nums" style={{ color: 'var(--text-tertiary)' }}>{expDelta.up ? "↑" : "↓"} {expDelta.label}</span>}
+              </div>
             </div>
-            <div className="flex items-baseline gap-2">
-              <p className={`text-lg font-bold tabular-nums ${net >= 0 ? "text-green-600" : "text-red-600"}`}>
-                {net >= 0 ? "+" : ""}{formatINR(net)}
-              </p>
-              {netDelta && (
-                <span className="text-[11px] font-medium tabular-nums text-gray-400 truncate">
-                  {netDelta.up ? "↑" : "↓"} {netDelta.label}
-                </span>
-              )}
+            {/* Desktop stacked */}
+            <div className="hidden md:block">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="h-2 w-2 rounded-full bg-red-500" />
+                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Expenses</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--expense-color)' }}>{formatINR(totalExpense)}</p>
+                {expDelta && <span className="text-[11px] font-medium tabular-nums truncate" style={{ color: 'var(--text-tertiary)' }}>{expDelta.up ? "↑" : "↓"} {expDelta.label}</span>}
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl px-4 py-3" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}>
+            {/* Mobile row */}
+            <div className="flex items-center justify-between gap-3 md:hidden">
+              <div className="flex items-center gap-2">
+                <span className={`h-2 w-2 rounded-full shrink-0 ${net >= 0 ? "bg-green-500" : "bg-red-500"}`} />
+                <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Net savings</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <p className="text-base font-bold tabular-nums" style={{ color: net >= 0 ? 'var(--income-color)' : 'var(--expense-color)' }}>
+                  {net >= 0 ? "+" : ""}{formatINR(net)}
+                </p>
+                {netDelta && <span className="text-[11px] font-medium tabular-nums" style={{ color: 'var(--text-tertiary)' }}>{netDelta.up ? "↑" : "↓"} {netDelta.label}</span>}
+              </div>
+            </div>
+            {/* Desktop stacked */}
+            <div className="hidden md:block">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className={`h-2 w-2 rounded-full ${net >= 0 ? "bg-green-500" : "bg-red-500"}`} />
+                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Net savings</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <p className={`text-lg font-bold tabular-nums ${net >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  {net >= 0 ? "+" : ""}{formatINR(net)}
+                </p>
+                {netDelta && <span className="text-[11px] font-medium tabular-nums text-gray-400 truncate">{netDelta.up ? "↑" : "↓"} {netDelta.label}</span>}
+              </div>
             </div>
           </div>
         </div>

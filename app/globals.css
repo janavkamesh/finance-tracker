@@ -161,6 +161,9 @@
   --sidebar-bg:           var(--bg-surface);
   --sidebar-border-rule:  1px solid var(--border-sidebar);
 
+  /* Mobile header offset — overridden to dynamic value below 768px */
+  --mobile-header-h: 0px;
+
   /* === shadcn/ui variables mapped to Obsidian Vault === */
   --background:           #F2F6FA;
   --foreground:           #0F172A;
@@ -474,4 +477,109 @@ input[type="number"],
 input[type="text"] {
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   FINTRACK INDIA — MOBILE OPTIMIZATIONS  (max-width: 767px)
+   Desktop/tablet styles are NOT touched here.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 767px) {
+
+  /* ── 1. Safe-area CSS variables ───────────────────────────────────── */
+  :root {
+    --safe-top:    env(safe-area-inset-top,    0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left:   env(safe-area-inset-left,   0px);
+    --safe-right:  env(safe-area-inset-right,  0px);
+    /* Dynamic mobile header height — sticky page headers sit below this */
+    --mobile-header-h: calc(56px + env(safe-area-inset-top, 0px));
+  }
+
+
+  /* ── 2. Prevent iOS viewport zoom on input focus ──────────────────── */
+  /* iOS auto-zooms when focused input font-size < 16px. Force 16px.     */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* ── 3. Remove 300ms tap delay & ghost tap highlight ─────────────── */
+  button, a, input, select, textarea, [role="button"], [role="tab"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── 4. Focus states for keyboard / switch-access navigation ──────── */
+  *:focus { outline: none; }
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 3px solid var(--cta-primary-bg);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* ── 5. Bottom nav: respect home-indicator on modern iPhones ─────── */
+  nav[data-mobile-nav="true"] {
+    height: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+
+  /* ── 6. Sonner toast: float above bottom nav ──────────────────────── */
+  [data-sonner-toaster] {
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* ── 7. Typography: mobile-optimised scale ────────────────────────── */
+  body {
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* ── 8. Skeleton shimmer for loading states ───────────────────────── */
+  @keyframes mobile-shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+  }
+  .mobile-skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--skeleton-base)  0%,
+      var(--skeleton-shine) 50%,
+      var(--skeleton-base)  100%
+    );
+    background-size: 200% 100%;
+    animation: mobile-shimmer 1.5s infinite;
+    border-radius: 8px;
+  }
+
+  /* ── 9. Tap press feedback utility ───────────────────────────────── */
+  .mobile-press:active {
+    transform: scale(0.97);
+    transition: transform 100ms ease;
+  }
+
+  /* ── 10. Horizontal-scroll chip rows (filter chips, tabs) ─────────── */
+  .mobile-chip-scroll {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .mobile-chip-scroll::-webkit-scrollbar { display: none; }
+}
+
+/* Reduced motion — disable animations globally when user prefers ────── */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-skeleton { animation: none; background: var(--skeleton-base); }
+  .mobile-press:active { transform: none; }
 }

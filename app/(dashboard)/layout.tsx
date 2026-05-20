@@ -38,11 +38,17 @@ export default async function DashboardLayout({
 
       {/* Page content */}
       <div className="flex flex-1 flex-col min-w-0">
-        {/* Spacer so content clears the fixed mobile header */}
-        <div className="h-14 md:hidden" />
+        {/* Spacer so content clears the fixed mobile header (56px + safe-area-top) */}
+        <div
+          className="md:hidden"
+          style={{ height: "calc(56px + env(safe-area-inset-top, 0px))" }}
+        />
         {children}
-        {/* Spacer so content clears the fixed bottom nav */}
-        <div className="h-16 md:hidden" />
+        {/* Spacer so content clears the fixed bottom nav (64px + safe-area-bottom) */}
+        <div
+          className="md:hidden"
+          style={{ height: "calc(64px + env(safe-area-inset-bottom, 0px))" }}
+        />
       </div>
 
       {/* Bottom navigation — mobile only */}

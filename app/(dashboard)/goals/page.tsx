@@ -92,16 +92,19 @@ export default async function GoalsPage() {
   return (
     <>
       {/* Sticky header — matches Home & Transactions */}
-      <div className="sticky top-14 md:top-0 z-10 bg-white border-b border-gray-100 h-[88px] px-6 md:px-8 flex items-center justify-between gap-4">
+      <div
+        className="sticky z-10 h-[64px] md:h-[88px] px-4 md:px-8 flex items-center justify-between gap-4"
+        style={{ top: 'var(--mobile-header-h, 56px)', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-default)' }}
+      >
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold text-gray-900">Goals &amp; Planning</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-lg md:text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Goals &amp; Planning</h1>
+          <p className="hidden md:block text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
             Track savings goals, manage recurring bills, and watch your net worth grow.
           </p>
         </div>
       </div>
 
-    <main className="px-6 md:px-8 pb-8 pt-4">
+    <main className="px-4 md:px-8 pb-8 pt-4">
       {/* Two-column layout — Recurring Bills fills the entire left column;
           Financial Goals + Net Worth stack in the right column.
           CSS grid align-items:stretch (default) makes the left card grow to
