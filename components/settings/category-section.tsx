@@ -42,18 +42,12 @@ export function CategorySection({
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
-  // When Next.js revalidates (server action completes), merge the fresh server list
-  // with any still-pending optimistic entries so there's no flash/duplicate.
+  // When Next.js revalidates (server action completes), adopt the authoritative
+  // server list. Optimistic entries are only needed during the ~500 ms while the
+  // server action is in-flight; once the real data arrives they are replaced
+  // seamlessly (same name → same alphabetical position, no visible jump).
   useEffect(() => {
-    setCategories((prev) => {
-      const serverIds = new Set(initialCategories.map((c) => c.id));
-      const pending = prev.filter(
-        (c) => c.id.startsWith("opt-cat-") && !serverIds.has(c.id),
-      );
-      let merged = [...initialCategories];
-      for (const opt of pending) merged = insertAlphabetical(merged, opt);
-      return merged;
-    });
+    setCategories(initialCategories);
   }, [initialCategories]);
 
   function handleOptimisticAdd(data: {
@@ -76,9 +70,16 @@ export function CategorySection({
 
   function handleDelete(cat: Category) {
     setConfirmingId(null);
+    // Optimistic remove — row disappears immediately, no waiting for server
+    setCategories((prev) => prev.filter((c) => c.id !== cat.id));
     deleteCategory(cat.id).then((result) => {
-      if (result?.error) toast.error(result.error);
-      else toast.success("Category deleted");
+      if (result?.error) {
+        // Restore the row if the server rejected the delete
+        setCategories((prev) => insertAlphabetical(prev, cat));
+        toast.error(result.error);
+      } else {
+        toast.success("Category deleted");
+      }
     });
   }
 
