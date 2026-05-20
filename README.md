@@ -2461,3 +2461,28 @@ The Save button is no longer `disabled` or shows "Saving…" — it responds the
 1. The category ID is added to `deletedIds` and removed from `localCategories` immediately — the row disappears at once.
 2. The server call runs in the background; on failure the ID is removed from `deletedIds` (row reappears) and an error toast is shown.
 The Delete confirm button is no longer `disabled` or shows "…".
+
+### Transaction list date-group header — premium separator style
+Removed the grey `var(--bg-date-group)` block background from date group headers. Headers now use `var(--bg-elevated)` (matches the card background) so they are invisible as a colour block but still work as a proper sticky overlay when scrolled. Explicit `borderTop` removed — the outer `divide-y` container already draws the group-separation line. `borderBottom` is kept (1 px, `var(--border-default)`) to anchor each date label above its transaction rows. Typography (`text-xs font-semibold uppercase tracking-wider`, `var(--text-tertiary)`) is unchanged, maintaining visual hierarchy without the heavy band.
+
+### Transaction list sort — Today always first, future dates at bottom
+`groupedTransactions` now pre-sorts `displayedTransactions` before grouping: today and past dates are ordered newest-first; any future-dated transaction (date > today) is pushed to the bottom of the list, ordered soonest-first. Insertion order of the `groups` object is therefore deterministic and correct — "Today" is always the first visible group, followed by "Yesterday", then older dates. Future transactions (e.g. a scheduled entry for tomorrow) appear at the very bottom under their actual date label.
+
+### Chart click focus-ring suppression (globals.css)
+Recharts SVG elements (pie sectors, line/area curves, bar rectangles, dots) are focusable by default, so clicking them triggers the browser's native focus outline — a square border that appears around the clicked element. Fixed with a single CSS block in `globals.css` that applies `outline: none` to every Recharts interactive class (`.recharts-wrapper *:focus`, `.recharts-sector:focus`, `.recharts-curve:focus`, `.recharts-rectangle:focus`, `.recharts-dot:focus`, `.recharts-pie-sector path:focus`, `.recharts-bar-rectangle:focus`). Hover animation (sector expansion) and active states are unaffected — only the unwanted square outline is removed.
+
+### CategorySection client component — optimistic insert + confirm visibility fix
+Two bugs in the settings category list, fixed by replacing the inline server-component rendering with a new `components/settings/category-section.tsx` client component:
+
+**Bug 1 — alphabetical jump on create**: `settings/page.tsx` is a server component; after `addCategory` runs and revalidates, the new category appeared only after ~1s and could briefly flash in the wrong position. Fix: `CategorySection` keeps a local `useState` copy of the list. `CategoryDialog` now accepts an `onAdd` callback that fires synchronously before the server action; `CategorySection.handleOptimisticAdd` inserts the new entry at the correct alphabetical position (via `insertAlphabetical`) immediately. When the server revalidation arrives, the `useEffect` merges the fresh server list with any still-pending optimistic entries — the real category replaces the temp entry at the same sorted position with no visible jump.
+
+**Bug 2 — Delete/Cancel buttons invisible after click**: The action area had `opacity-0 group-hover:opacity-100`. The instant the mouse left the row (which happens naturally as you move to click "Delete"), the hover class stopped matching and the buttons vanished. Fix: `confirmingId` state now lives in `CategorySection`. The action wrapper class is `opacity-100` when `isConfirming` is true and `opacity-0 group-hover:opacity-100` otherwise — the opacity is fully controlled by JS state, not CSS hover, when confirming is active. `delete-category-button.tsx` is no longer used by the settings page (the delete logic is inlined in `CategorySection`).
+
+### Add Recurring Transaction — calculator, field reorder, optional description
+Three changes to `components/settings/recurring-dialog.tsx` and `lib/validations/recurring.ts`:
+
+**Calculator on Amount**: `safeCalc` and `CalcPanel` (copied from `transaction-dialog.tsx`) added to `recurring-dialog.tsx`. Amount field now has a calculator toggle button (right-aligned inside the input). `setValue` added to `useForm` destructure so the calc result writes directly into the form value with validation.
+
+**Field order**: Reordered to match the Add Transaction dialog — Amount first, Category second, Description third. Improves cognitive consistency across both dialogs.
+
+**Description optional**: Removed `.min(1, "Description is required")` from `recurringSchema` in `lib/validations/recurring.ts`. Description accepts empty string; the label now shows "(optional)" in muted grey. Form submits without description; the server action receives `""` when left blank.

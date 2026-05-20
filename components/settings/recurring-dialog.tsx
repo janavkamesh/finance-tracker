@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DatePicker } from "@/components/ui/date-picker";
 import { parse, format } from "date-fns";
 import { toast } from "sonner";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Calculator, Delete } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -17,6 +17,95 @@ import {
 import { recurringSchema, type RecurringInput } from "@/lib/validations/recurring";
 import { addRecurring, updateRecurring } from "@/actions/recurring";
 import { CategoryPicker } from "@/components/transactions/category-picker";
+
+function safeCalc(expr: string): number | null {
+  const cleaned = expr.trim();
+  if (!cleaned) return null;
+  if (!/^[\d+\-*/×÷.()\s]+$/.test(cleaned)) return null;
+  const jsExpr = cleaned.replace(/×/g, "*").replace(/÷/g, "/");
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval
+    const result = Function('"use strict"; return (' + jsExpr + ")")() as number;
+    return typeof result === "number" && isFinite(result) ? result : null;
+  } catch {
+    return null;
+  }
+}
+
+function CalcPanel({ onResult }: { onResult: (v: string) => void }) {
+  const [expr, setExpr] = useState("");
+
+  const press = useCallback((key: string) => {
+    if (key === "C") { setExpr(""); return; }
+    if (key === "←") { setExpr((e) => e.slice(0, -1)); return; }
+    if (key === "=") {
+      const result = safeCalc(expr);
+      if (result !== null) {
+        const str = Number.isInteger(result) ? String(result) : result.toFixed(2);
+        onResult(str);
+        setExpr(str);
+      }
+      return;
+    }
+    setExpr((e) => e + key);
+  }, [expr, onResult]);
+
+  const display = expr || "0";
+  const preview = expr ? safeCalc(expr) : null;
+
+  const rows = [
+    ["7", "8", "9", "÷"],
+    ["4", "5", "6", "×"],
+    ["1", "2", "3", "-"],
+    [".", "0", "←", "+"],
+    ["C", "", "", "="],
+  ];
+
+  return (
+    <div className="mt-2 rounded-xl p-3 shadow-sm" style={{ border: '1px solid var(--border-default)', background: 'var(--bg-elevated)' }}>
+      <div className="mb-2 rounded-lg px-3 py-2 text-right" style={{ border: '1px solid var(--border-default)', background: 'var(--bg-input)' }}>
+        <p className="text-xs h-4 tabular-nums truncate" style={{ color: 'var(--text-tertiary)' }}>{expr || ""}</p>
+        <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>
+          {preview !== null && expr !== String(preview) ? `= ${preview}` : display}
+        </p>
+      </div>
+      <div className="grid grid-cols-4 gap-1.5">
+        {rows.flatMap((row, ri) =>
+          row.map((key, ci) => {
+            if (!key) return <div key={`${ri}-${ci}`} />;
+            const isOp = ["÷", "×", "-", "+"].includes(key);
+            const isEq = key === "=";
+            const isClear = key === "C";
+            const isDel = key === "←";
+            const calcStyle = isEq
+              ? { background: 'var(--cta-primary-bg)', color: 'var(--cta-primary-text)' }
+              : isOp
+                ? { background: 'var(--cta-secondary-bg)', color: 'var(--cta-secondary-text)' }
+                : isClear
+                  ? {}
+                  : { background: 'var(--bg-raised)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' };
+            return (
+              <button
+                key={`${ri}-${ci}`}
+                type="button"
+                onClick={() => press(key)}
+                className={cn(
+                  "flex h-10 w-full items-center justify-center rounded-lg text-sm font-semibold transition-colors select-none",
+                  isClear
+                    ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50"
+                    : "hover:opacity-90",
+                )}
+                style={isClear ? {} : calcStyle}
+              >
+                {isDel ? <Delete className="size-4" /> : key}
+              </button>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
 
 interface Category {
   id: string;
@@ -52,12 +141,15 @@ export function RecurringDialog({ categories, recurring, triggerVariant = "prima
   const [open, setOpen] = useState(false);
   const isEdit = !!recurring;
 
+  const [showCalc, setShowCalc] = useState(false);
+
   const {
     register,
     handleSubmit,
     control,
     watch,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<RecurringInput>({
     resolver: zodResolver(recurringSchema),
@@ -178,34 +270,43 @@ export function RecurringDialog({ categories, recurring, triggerVariant = "prima
               )}
             />
 
-            {/* Description */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
-              <input
-                type="text"
-                placeholder="e.g. Rent, Netflix, Salary"
-                {...register("description")}
-                className={inputClass}
-              />
-              {errors.description && (
-                <p className="mt-1.5 text-xs text-red-600">{errors.description.message}</p>
-              )}
-            </div>
-
-            {/* Amount */}
+            {/* Amount + Calculator */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount (₹)</label>
-              <input
-                type="text"
-                inputMode="decimal"
-                placeholder="0.00"
-                {...register("amount", {
-                  setValueAs: (v) => (v === "" || v == null ? undefined : Number(v)),
-                })}
-                className={inputClass}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  {...register("amount", {
+                    setValueAs: (v) => (v === "" || v == null ? undefined : Number(v)),
+                  })}
+                  className={cn(inputClass, "pr-10")}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCalc((s) => !s)}
+                  className={cn(
+                    "absolute right-2.5 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-md transition-colors",
+                    showCalc
+                      ? "bg-[#1E6B4E] text-white"
+                      : "hover:bg-black/5"
+                  )}
+                  aria-label="Toggle calculator"
+                >
+                  <Calculator className="size-3.5" />
+                </button>
+              </div>
               {errors.amount && (
                 <p className="mt-1.5 text-xs text-red-600">{errors.amount.message}</p>
+              )}
+              {showCalc && (
+                <CalcPanel
+                  onResult={(v) => {
+                    setValue("amount", Number(v), { shouldValidate: true });
+                    setShowCalc(false);
+                  }}
+                />
               )}
             </div>
 
@@ -226,6 +327,23 @@ export function RecurringDialog({ categories, recurring, triggerVariant = "prima
               />
               {errors.category_id && (
                 <p className="mt-1.5 text-xs text-red-600">{errors.category_id.message}</p>
+              )}
+            </div>
+
+            {/* Description (optional) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Description{" "}
+                <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Rent, Netflix, Salary"
+                {...register("description")}
+                className={inputClass}
+              />
+              {errors.description && (
+                <p className="mt-1.5 text-xs text-red-600">{errors.description.message}</p>
               )}
             </div>
 

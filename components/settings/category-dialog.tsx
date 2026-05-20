@@ -31,9 +31,16 @@ interface Category {
 
 interface Props {
   category?: Category;
+  onAdd?: (data: {
+    tempId: string;
+    name: string;
+    type: "income" | "expense" | "both";
+    color: string | null;
+    monthly_limit: number | null;
+  }) => void;
 }
 
-export function CategoryDialog({ category }: Props) {
+export function CategoryDialog({ category, onAdd }: Props) {
   const [open, setOpen] = useState(false);
   const [monthlyLimit, setMonthlyLimit] = useState(
     category?.monthly_limit != null ? String(category.monthly_limit) : ""
@@ -69,6 +76,16 @@ export function CategoryDialog({ category }: Props) {
 
     setOpen(false);
     toast.success(isEdit ? "Category updated" : "Category added");
+
+    if (!isEdit && onAdd) {
+      onAdd({
+        tempId: `opt-cat-${Date.now()}`,
+        name: data.name,
+        type: data.type,
+        color: data.color ?? null,
+        monthly_limit: monthlyLimit ? parseFloat(monthlyLimit) : null,
+      });
+    }
 
     const action = isEdit ? updateCategory(category!.id, fd) : addCategory(fd);
     action.then((result) => {

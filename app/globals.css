@@ -403,6 +403,22 @@
   color: #F1F5F9 !important;
 }
 
+/* ── Suppress focus-ring on all Recharts interactive elements ─────────────── */
+/* Clicking a chart area, pie sector, or bar shows a browser focus outline    */
+/* (square border). Remove it globally; hover/active animations are unaffected */
+.recharts-wrapper:focus,
+.recharts-wrapper *:focus,
+.recharts-surface:focus,
+.recharts-layer:focus,
+.recharts-sector:focus,
+.recharts-curve:focus,
+.recharts-rectangle:focus,
+.recharts-dot:focus,
+.recharts-pie-sector path:focus,
+.recharts-bar-rectangle:focus {
+  outline: none !important;
+}
+
 /* ── Date group separator rows — Fix 3 from spec ─────────────────────────── */
 .dark .bg-gray-50\/80 {
   background-color: #111620;

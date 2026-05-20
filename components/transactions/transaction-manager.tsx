@@ -267,8 +267,20 @@ export function TransactionManager({ initialTransactions, categories, activeMont
 
   // ── Group displayed transactions by date ──────────────────────────
   const groupedTransactions = useMemo(() => {
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+    // Today/past: newest first. Future: soonest first, pushed below everything.
+    const sorted = [...displayedTransactions].sort((a, b) => {
+      const aFuture = a.date > todayStr;
+      const bFuture = b.date > todayStr;
+      if (aFuture !== bFuture) return aFuture ? 1 : -1;
+      if (aFuture) return a.date.localeCompare(b.date);
+      return b.date.localeCompare(a.date);
+    });
+
     const groups: Record<string, TxnRow[]> = {};
-    displayedTransactions.forEach((txn) => {
+    sorted.forEach((txn) => {
       const label = getGroupLabel(txn.date);
       if (!groups[label]) groups[label] = [];
       groups[label].push(txn);
@@ -498,10 +510,9 @@ export function TransactionManager({ initialTransactions, categories, activeMont
               <div key={dateLabel}>
                 {/* Date group sub-header */}
                 <div
-                  className="px-4 py-1.5 first:border-t-0 sticky top-10 z-10"
+                  className="px-4 py-1.5 sticky top-10 z-10"
                   style={{
-                    background: 'var(--bg-date-group)',
-                    borderTop: '1px solid var(--border-default)',
+                    background: 'var(--bg-elevated)',
                     borderBottom: '1px solid var(--border-default)',
                   }}
                 >

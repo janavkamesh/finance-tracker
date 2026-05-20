@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { createClient, getUser } from "@/lib/supabase/server";
-import { getCategoryIcon } from "@/lib/category-icons";
 
 export const metadata: Metadata = {
   title: "Settings — FinTrack India",
@@ -9,8 +8,7 @@ import { BudgetForm } from "@/components/settings/budget-form";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { PasswordForm } from "@/components/settings/password-form";
 import { PreferencesForm } from "@/components/settings/preferences-form";
-import { CategoryDialog } from "@/components/settings/category-dialog";
-import { DeleteCategoryButton } from "@/components/settings/delete-category-button";
+import { CategorySection } from "@/components/settings/category-section";
 import { DataExportButton } from "@/components/settings/data-export-button";
 
 type Category = {
@@ -21,18 +19,6 @@ type Category = {
   icon: string | null;
   is_system: boolean;
   monthly_limit: number | null;
-};
-
-const TYPE_LABEL: Record<string, string> = {
-  income: "Income",
-  expense: "Expense",
-  both: "Both",
-};
-
-const TYPE_STYLE: Record<string, string> = {
-  income: "bg-green-100 text-green-700",
-  expense: "bg-red-100 text-red-700",
-  both: "bg-[#1E6B4E]/10 text-[#1E6B4E]",
 };
 
 export default async function SettingsPage() {
@@ -113,59 +99,7 @@ export default async function SettingsPage() {
         </section>
 
         {/* ── Custom categories ──────────────────────────────────────── */}
-        <section className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900">
-                Custom categories
-              </h2>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Add your own categories for income and expenses.
-              </p>
-            </div>
-            <CategoryDialog />
-          </div>
-
-          {customCats.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center px-6">
-              <p className="text-sm text-gray-400">No custom categories yet.</p>
-              <p className="text-xs text-gray-400 mt-1">
-                Add one above to personalise your tracking.
-              </p>
-            </div>
-          ) : (
-            <ul className="divide-y divide-gray-50">
-              {customCats.map((cat) => {
-                const CatIcon = getCategoryIcon(cat);
-                return (
-                  <li
-                    key={cat.id}
-                    className="flex items-center gap-3 px-6 py-3.5 group"
-                  >
-                    <div
-                      className="flex h-7 w-7 items-center justify-center rounded-lg shrink-0"
-                      style={{ backgroundColor: `${cat.color ?? "#9ca3af"}18` }}
-                    >
-                      <CatIcon className="size-4" style={{ color: cat.color ?? "#9ca3af" }} />
-                    </div>
-                    <span className="flex-1 text-sm font-medium text-gray-900 truncate">
-                      {cat.name}
-                    </span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${TYPE_STYLE[cat.type]}`}
-                    >
-                      {TYPE_LABEL[cat.type]}
-                    </span>
-                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <CategoryDialog category={cat} />
-                      <DeleteCategoryButton id={cat.id} />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
+        <CategorySection initialCategories={customCats} />
 
         {/* ── Data & Privacy ─────────────────────────────────────────── */}
         <section className="rounded-2xl border border-gray-100 bg-white p-6">
