@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Banknote, Smartphone, CreditCard, Building2, Wallet, Trash2,
-} from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatINR } from "@/lib/utils";
@@ -39,50 +37,32 @@ interface Props {
   categories: CategoryItem[];
 }
 
-// ── Payment method config ──────────────────────────────────────────────────────
-const PAYMENT_METHODS: Record<
-  string,
-  { label: string; Icon: React.ComponentType<{ className?: string }> }
-> = {
-  cash:        { label: "Cash",        Icon: Banknote },
-  upi:         { label: "UPI",         Icon: Smartphone },
-  card:        { label: "Card",        Icon: CreditCard },
-  net_banking: { label: "Net Banking", Icon: Building2 },
-  wallet:      { label: "Wallet",      Icon: Wallet },
+const PAYMENT_LABELS: Record<string, string> = {
+  cash:        "Cash",
+  upi:         "UPI",
+  card:        "Card",
+  net_banking: "Net Banking",
+  wallet:      "Wallet",
 };
 
-// ── Per-row interaction state ──────────────────────────────────────────────────
 type RowState = "idle" | "deleting";
 
-// ── Component ─────────────────────────────────────────────────────────────────
 export function AnimatedTransactionList({ transactions, categories }: Props) {
   const [rowStates, setRowStates] = useState<Record<string, RowState>>({});
 
-  function getState(id: string): RowState {
-    return rowStates[id] ?? "idle";
-  }
-
+  function getState(id: string): RowState { return rowStates[id] ?? "idle"; }
   function setState(id: string, next: RowState) {
     setRowStates((prev) => ({ ...prev, [id]: next }));
   }
 
   async function handleDelete(id: string) {
-    // Snapshot data before deletion so we can restore it on Undo
     const snapshot = transactions.find((t) => t.id === id);
-
-    // 1. Trigger the collapse + fade animation
     setState(id, "deleting");
-
-    // 2. Wait for animation to complete before hitting the server.
-    //    This guarantees the row is visually gone before the DOM updates,
-    //    eliminating any layout jump.
     await new Promise((r) => setTimeout(r, 320));
-
-    // 3. Call server action — revalidatePath("/dashboard") removes it from the list
     const result = await deleteTransaction(id);
     if (result?.error) {
       toast.error(result.error);
-      setState(id, "idle"); // reverse animation on error
+      setState(id, "idle");
     } else {
       toast.success("Transaction deleted", {
         action: snapshot
@@ -135,14 +115,19 @@ export function AnimatedTransactionList({ transactions, categories }: Props) {
 
   // ── List ─────────────────────────────────────────────────────────────────────
   return (
-    <ul>
-      {transactions.map((txn, idx) => {
+    <ul className="divide-y divide-black/[0.05] dark:divide-white/[0.05]">
+      {transactions.map((txn) => {
         const state = getState(txn.id);
         const isDeleting = state === "deleting";
         const isIncome = txn.type === "income";
-        const pm = txn.payment_method ? PAYMENT_METHODS[txn.payment_method] : null;
+        const paymentLabel = txn.payment_method
+          ? PAYMENT_LABELS[txn.payment_method] ?? null
+          : null;
 
-        // Shape for the edit dialog
+        const Icon = txn.category_name
+          ? getCategoryIcon({ name: txn.category_name, icon: txn.category_icon ?? undefined })
+          : null;
+
         const txnForEdit = {
           id: txn.id,
           type: txn.type,
@@ -154,108 +139,102 @@ export function AnimatedTransactionList({ transactions, categories }: Props) {
         };
 
         return (
-          // ── Outer li — owns the height + opacity animation ─────────────────
           <li
             key={txn.id}
             className={cn(
-              "overflow-hidden",
-              // Grid-row trick: animates the *actual* content height, not a capped max-height.
-              // grid-rows-[1fr] → grid-rows-[0fr] collapses cleanly at the real row height.
-              "grid transition-[grid-template-rows,opacity] ease-in-out",
+              "overflow-hidden grid transition-[grid-template-rows,opacity] ease-in-out",
               isDeleting
                 ? "duration-300 grid-rows-[0fr] opacity-0"
                 : "duration-300 grid-rows-[1fr] opacity-100"
             )}
           >
-            {/* Inner div — required for grid-rows collapse trick */}
             <div className="overflow-hidden min-h-0">
-              {/* ── Row content ──────────────────────────────────────────────── */}
               <div
-                className={cn(
-                  "group flex items-stretch cursor-default transition-colors duration-150",
-                  "hover:bg-[rgba(22,101,52,0.05)] dark:hover:bg-[rgba(0,185,107,0.06)]",
-                  idx < transactions.length - 1 && "border-b"
-                )}
-                style={idx < transactions.length - 1 ? { borderBottomColor: 'var(--border-default)' } : {}}
+                className="group flex items-center gap-3 px-5 py-3.5 transition-colors duration-150 hover:bg-[rgba(22,101,52,0.05)] dark:hover:bg-[rgba(0,185,107,0.06)]"
               >
-                {/* Left colour stripe */}
+                {/* ── Category icon ─────────────────────────────────────── */}
                 <div
-                  className={cn(
-                    "w-[3px] shrink-0 transition-colors duration-300",
-                    isIncome ? "bg-green-400" : "bg-red-400"
-                  )}
-                />
-
-                <div className="flex flex-1 items-center gap-3 px-5 py-3.5">
-                  {/* ── Main content ───────────────────────────────────────── */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-                      {txn.description || txn.category_name || "—"}
-                    </p>
-
-                    {/* Meta row: category · date · payment method */}
-                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                      {txn.category_name && (() => {
-                        const CatIcon = getCategoryIcon({
-                          name: txn.category_name!,
-                          icon: txn.category_icon,
-                        });
-                        return (
-                          <span
-                            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium"
-                            style={
-                              txn.category_user_id && txn.category_color
-                                ? { backgroundColor: `${txn.category_color}18`, color: txn.category_color }
-                                : { background: 'var(--tag-bg)', color: 'var(--tag-text)' }
-                            }
-                          >
-                            <CatIcon className="size-2.5 shrink-0" />
-                            {txn.category_name}
-                          </span>
-                        );
-                      })()}
-
-                      <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                        {new Date(txn.date + "T00:00:00").toLocaleDateString(
-                          "en-IN",
-                          { day: "numeric", month: "short" }
-                        )}
-                      </span>
-
-                      {/* Payment method badge — only shown when set */}
-                      {pm && (
-                        <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium" style={{ background: 'var(--tag-bg)', color: 'var(--tag-text)', border: '1px solid var(--tag-border)' }}>
-                          <pm.Icon className="size-2.5 shrink-0" />
-                          {pm.label}
-                        </span>
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                  style={
+                    txn.category_user_id && txn.category_color
+                      ? { backgroundColor: `${txn.category_color}1f`, color: txn.category_color }
+                      : { background: 'var(--tag-bg)', color: 'var(--text-secondary)' }
+                  }
+                >
+                  {Icon ? (
+                    <Icon className="size-4" />
+                  ) : (
+                    <span
+                      className={cn(
+                        "h-2 w-2 rounded-full",
+                        isIncome ? "bg-green-500" : "bg-red-500"
                       )}
-                    </div>
-                  </div>
-
-                  {/* ── Amount ─────────────────────────────────────────────── */}
-                  <span
-                    className="text-base font-bold tabular-nums shrink-0"
-                    style={{ color: isIncome ? 'var(--income-color)' : 'var(--expense-color)' }}
-                  >
-                    {isIncome ? "+" : "−"}{formatINR(txn.amount)}
-                  </span>
-
-                  {/* ── Action buttons (revealed on hover) ─────────────────── */}
-                  <div className="flex items-center gap-0.5 transition-opacity duration-150 shrink-0 opacity-0 group-hover:opacity-100">
-                    <TransactionDialog
-                      categories={categories}
-                      transaction={txnForEdit}
                     />
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(txn.id)}
-                      className="flex items-center justify-center rounded-lg p-2 transition-colors hover:bg-[rgba(248,113,113,0.08)] hover:text-[#F87171]"
+                  )}
+                </div>
+
+                {/* ── Text block ────────────────────────────────────────── */}
+                <div className="flex-1 min-w-0">
+                  {/* Title */}
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                    {txn.description || txn.category_name || "—"}
+                  </p>
+
+                  {/* Meta row: category · date · payment */}
+                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                    {txn.category_name && (
+                      <span
+                        className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold leading-none"
+                        style={
+                          txn.category_user_id && txn.category_color
+                            ? { backgroundColor: `${txn.category_color}1a`, color: txn.category_color }
+                            : { background: 'var(--tag-bg)', color: 'var(--tag-text)' }
+                        }
+                      >
+                        {txn.category_name}
+                      </span>
+                    )}
+
+                    <span
+                      className="text-xs tabular-nums shrink-0"
                       style={{ color: 'var(--text-tertiary)' }}
-                      aria-label="Delete transaction"
                     >
-                      <Trash2 className="size-4" />
-                    </button>
+                      {new Date(txn.date + "T00:00:00").toLocaleDateString("en-IN", {
+                        day: "numeric", month: "short", year: "numeric",
+                      })}
+                    </span>
+
+                    {paymentLabel && (
+                      <span
+                        className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide leading-none"
+                        style={{ background: 'var(--tag-bg)', color: 'var(--tag-text)', border: '1px solid var(--tag-border)' }}
+                      >
+                        {paymentLabel}
+                      </span>
+                    )}
                   </div>
+                </div>
+
+                {/* ── Amount ───────────────────────────────────────────── */}
+                <span
+                  className="text-sm font-semibold tabular-nums shrink-0"
+                  style={{ color: isIncome ? 'var(--income-color)' : 'var(--expense-color)' }}
+                >
+                  {isIncome ? "+" : "−"}{formatINR(txn.amount)}
+                </span>
+
+                {/* ── Actions (hover-reveal) ────────────────────────────── */}
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 shrink-0">
+                  <TransactionDialog categories={categories} transaction={txnForEdit} />
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(txn.id)}
+                    className="flex items-center justify-center rounded-lg p-2 transition-colors hover:bg-[rgba(248,113,113,0.08)] hover:text-[#F87171]"
+                    style={{ color: 'var(--text-tertiary)' }}
+                    aria-label="Delete transaction"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
                 </div>
               </div>
             </div>

@@ -2495,3 +2495,11 @@ Three changes to `components/settings/recurring-dialog.tsx` and `lib/validations
 
 ### Dark mode divider polish — eliminate harsh white separator lines
 All `divide-gray-50` and `border-gray-50` utility classes lacked dark-mode variants, causing them to render as near-white `#f9fafb` lines against the dark background. Fixed across every affected file by upgrading to `divide-gray-100 dark:divide-white/5` and `border-gray-100 dark:border-white/5`, matching the subtle `rgba(255,255,255,0.07)` already used by `--border-default`. Files changed: `transaction-manager.tsx`, `goals/page.tsx`, `category-section.tsx`, `reports/page.tsx`, and all four `loading.tsx` skeleton screens.
+
+
+### Universal Transaction Row — visual consistency across Home and Transactions pages
+Eliminated the design split between the Home page transaction list and the Transactions page list. Both now render identical row anatomy: **[category icon badge] → [title / meta row] → [amount] → [hover-reveal actions]**.
+
+**Changes to `animated-transaction-list.tsx`** (Home page): Removed the `w-[3px]` red/green left stripe. Added a `h-9 w-9` rounded-lg category icon badge using `getCategoryIcon` — coloured with `category_color` for user categories, neutral `var(--tag-bg)` for system categories. Title upgraded to `font-semibold`. Meta row reordered to category pill → date → payment badge. Payment method moved out of the amount column into the meta row. Amount column simplified to amount-only. CSS variables used throughout for theme fidelity.
+
+**Changes to `transaction-manager.tsx`** (Transactions page): Matched the same meta row order (category pill → date → payment badge). Payment label removed from the stacked amount column. Title weight set to `font-semibold`. The date-grouped list structure and Master-Detail split remain unchanged.

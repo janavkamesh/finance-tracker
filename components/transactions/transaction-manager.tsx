@@ -946,18 +946,14 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                                 </div>
 
                                 <div className="min-w-0">
-                                  <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
                                     {txn.description || txn.category_name || "—"}
                                     {isOptimistic && (
                                       <span className="ml-1.5 text-[10px] text-gray-400 font-normal">saving…</span>
                                     )}
                                   </p>
+                                  {/* Meta row: category · date · payment — matches Home page row exactly */}
                                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                    <span className="text-xs shrink-0 tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
-                                      {new Date(txn.date + "T00:00:00").toLocaleDateString("en-IN", {
-                                        day: "numeric", month: "short", year: "numeric",
-                                      })}
-                                    </span>
                                     {txn.category_name && (
                                       <span
                                         className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold leading-none"
@@ -968,6 +964,19 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                                         }
                                       >
                                         {txn.category_name}
+                                      </span>
+                                    )}
+                                    <span className="text-xs shrink-0 tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
+                                      {new Date(txn.date + "T00:00:00").toLocaleDateString("en-IN", {
+                                        day: "numeric", month: "short", year: "numeric",
+                                      })}
+                                    </span>
+                                    {paymentLabel && (
+                                      <span
+                                        className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide leading-none"
+                                        style={{ background: 'var(--tag-bg)', color: 'var(--tag-text)', border: '1px solid var(--tag-border)' }}
+                                      >
+                                        {paymentLabel}
                                       </span>
                                     )}
                                   </div>
