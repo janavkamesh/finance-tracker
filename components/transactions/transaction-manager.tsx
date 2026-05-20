@@ -586,17 +586,9 @@ export function TransactionManager({ initialTransactions, categories, activeMont
                                   <span
                                     className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold leading-none"
                                     style={
-                                      !(txn.category_user_id && txn.category_color)
-                                        ? { background: 'var(--tag-bg)', color: 'var(--tag-text)' }
-                                        : undefined
-                                    }
-                                    style={
                                       txn.category_user_id && txn.category_color
-                                        ? {
-                                            backgroundColor: `${txn.category_color}1a`,
-                                            color: txn.category_color,
-                                          }
-                                        : undefined
+                                        ? { backgroundColor: `${txn.category_color}1a`, color: txn.category_color }
+                                        : { background: 'var(--tag-bg)', color: 'var(--tag-text)' }
                                     }
                                   >
                                     {txn.category_name}
