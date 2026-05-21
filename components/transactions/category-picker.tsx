@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
 import {
   Search, X, Check, ChevronDown, Plus, ArrowLeft,
   Tag, Trash2, type LucideIcon,
@@ -57,7 +56,6 @@ export function CategoryPicker({
   transactionType,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [view, setView] = useState<"list" | "create">("list");
   const [search, setSearch] = useState("");
   const [localCategories, setLocalCategories] = useState<Category[]>([]);
@@ -109,9 +107,6 @@ export function CategoryPicker({
         : allCategories,
     [allCategories, search]
   );
-
-  // Ensure portal renders only on client
-  useEffect(() => { setMounted(true); }, []);
 
   // Reset state whenever picker opens
   useEffect(() => {
@@ -239,25 +234,21 @@ export function CategoryPicker({
   const SelectedIcon = selected ? getCategoryIcon(selected) : null;
   const PreviewIcon = ICON_REGISTRY[selectedIconKey] ?? Tag;
 
-  // ── Portal overlay panel ────────────────────────────────────────────────
+  // ── Inline overlay panel (no portal — stays inside Base UI Dialog DOM so
+  //    the focus trap does not fight clicks inside the picker).
   const panel = (
-    // Backdrop — clicking it closes ONLY the category picker.
-    // onPointerDown with stopImmediatePropagation prevents Base UI's document-level
-    // outside-click detector from seeing pointer events that originate inside this
-    // portal (which lives on document.body, outside the parent dialog's DOM tree).
+    // Backdrop — clicking outside the panel closes the category picker.
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center"
       onMouseDown={handleClose}
-      onPointerDown={(e) => e.nativeEvent.stopImmediatePropagation()}
     >
-      {/* Panel — stopPropagation so clicks inside don't hit the backdrop */}
+      {/* Panel — stopPropagation so clicks inside don't bubble to the backdrop */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label={view === "list" ? "Choose category" : "Create category"}
         className="relative w-full max-w-sm rounded-xl bg-white border border-gray-200 shadow-2xl overflow-hidden"
         onMouseDown={(e) => e.stopPropagation()}
-        onPointerDown={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); }}
       >
         {view === "list" ? (
           <>
@@ -589,8 +580,9 @@ export function CategoryPicker({
         <ChevronDown className="size-4 shrink-0 text-gray-400" />
       </button>
 
-      {/* ── Portal — rendered to document.body, above the Transaction dialog ── */}
-      {mounted && open && createPortal(panel, document.body)}
+      {/* ── Inline fixed overlay — stays inside Base UI Dialog DOM so the
+           focus trap doesn't fight clicks inside the picker ── */}
+      {open && panel}
     </>
   );
 }
